@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoomMap Ops</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand__logo">RM</div>
+          <div class="brand__text">
+            <h1>RoomMap Ops</h1>
+            <p>Intel-style collaboration map</p>
+          </div>
+        </div>
+        <div class="room-switch">
+          <span class="muted">Shared map</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel panel--full">
+          <div class="panel__section board__header">
+            <div class="tabs" role="tablist">
+              <button class="tab tab--active" data-tab="people" role="tab">
+                People
+              </button>
+              <button class="tab" data-tab="activities" role="tab">
+                Activities
+              </button>
+            </div>
+            <div class="board__actions">
+              <input
+                id="searchInput"
+                type="text"
+                placeholder="Search..."
+                class="search-input"
+              />
+              <div id="roomStats" class="stats"></div>
+              <button id="addItemBtn" class="fab" aria-label="Add">+</button>
+            </div>
+          </div>
+
+          <div class="panel__section">
+            <div class="canvas-wrapper">
+              <div id="canvas" class="canvas"></div>
+            </div>
+            <p class="hint">
+              Drag nodes to move. Click to view details. Scroll to explore the
+              infinite canvas.
+            </p>
+          </div>
+
+          <div class="panel__section">
+            <h2>Details</h2>
+            <div id="detailPanel" class="detail">
+              Select a node to see details.
+            </div>
+            <div id="statsBreakdown" class="stats-breakdown hidden">
+              <h4>Statistics</h4>
+              <div id="statsContent"></div>
+            </div>
+            <div class="legend">
+              <span class="legend__title">Categories</span>
+              <span class="legend__item legend__item--jy">JY</span>
+              <span class="legend__item legend__item--cc">CC</span>
+              <span class="legend__item legend__item--youth">Youth</span>
+              <span class="legend__item legend__item--parents">Parents</span>
+            </div>
+          </div>
+
+          <div class="panel__section">
+            <h2>Tools</h2>
+            <div class="form-row">
+              <button id="exportRoomCsv" class="btn">Export People CSV</button>
+              <button id="exportAllJson" class="btn">Export All JSON</button>
+            </div>
+            <div class="form-row">
+              <input id="importFile" type="file" accept=".json,.csv" />
+            </div>
+            <p class="hint">CSV columns: name,area,note,categories</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="itemModal" class="modal hidden">
+      <div class="modal__content">
+        <h3>Add item</h3>
+        <form id="itemForm">
+          <div class="form-row">
+            <label class="muted" for="itemType">Type</label>
+            <select id="itemType">
+              <option value="people">Person</option>
+              <option value="activities">Activity</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <input id="itemName" type="text" placeholder="Name" required />
+          </div>
+          <div id="peopleFields">
+            <div class="form-row">
+              <input id="itemArea" type="text" placeholder="Area" />
+            </div>
+            <div class="chips">
+              <label><input type="checkbox" value="JY" /> JY</label>
+              <label><input type="checkbox" value="CC" /> CC</label>
+              <label><input type="checkbox" value="Youth" /> Youth</label>
+              <label><input type="checkbox" value="Parents" /> Parents</label>
+            </div>
+          </div>
+          <div id="activityFields" class="hidden">
+            <div class="form-row">
+              <label class="muted" for="activityType">Activity Type</label>
+              <select id="activityType">
+                <option value="">Select type...</option>
+                <option value="JY">JY</option>
+                <option value="CC">CC</option>
+                <option value="StudyCircle">Study Circle</option>
+                <option value="Devotional">Devotional</option>
+              </select>
+            </div>
+            <div id="jyFields" class="form-row hidden">
+              <input
+                id="animatorField"
+                type="text"
+                placeholder="Animator name"
+              />
+            </div>
+            <div id="ccFields" class="form-row hidden">
+              <input id="teacherField" type="text" placeholder="Teacher name" />
+            </div>
+            <div id="studyCircleFields" class="form-row hidden">
+              <input id="tutorField" type="text" placeholder="Tutor name" />
+            </div>
+            <div id="devotionalFields" class="form-row hidden">
+              <input
+                id="leaderField"
+                type="text"
+                placeholder="Devotional leader name"
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <input id="itemNote" type="text" placeholder="Notes (optional)" />
+          </div>
+          <div class="modal__actions">
+            <button id="modalCancel" class="btn" type="button">Cancel</button>
+            <button id="modalSave" class="btn btn--primary" type="submit">
+              Add
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
