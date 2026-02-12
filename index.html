@@ -8,31 +8,28 @@
   </head>
   <body>
     <div class="app">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand__logo">RM</div>
-          <div class="brand__text">
-            <h1>RoomMap Ops</h1>
-            <p>Intel-style collaboration map</p>
-          </div>
-        </div>
-        <div class="room-switch">
-          <span class="muted">Shared map</span>
-        </div>
-      </header>
-
       <main class="layout">
         <section class="panel panel--full">
           <div class="panel__section board__header">
             <div class="tabs" role="tablist">
-              <button class="tab tab--active" data-tab="people" role="tab">
-                People
+              <button class="tab tab--active" data-view="areas" role="tab">
+                Areas
               </button>
-              <button class="tab" data-tab="activities" role="tab">
+              <button class="tab" data-view="cohorts" role="tab">
+                Cohorts
+              </button>
+              <button class="tab" data-view="activities" role="tab">
                 Activities
               </button>
             </div>
             <div class="board__actions">
+              <button
+                id="cohortViewToggle"
+                class="btn btn--sm"
+                style="display: none"
+              >
+                View: Categories
+              </button>
               <input
                 id="searchInput"
                 type="text"
@@ -41,6 +38,82 @@
               />
               <div id="roomStats" class="stats"></div>
               <button id="addItemBtn" class="fab" aria-label="Add">+</button>
+            </div>
+          </div>
+
+          <div class="panel__section filter-section">
+            <button id="filterToggle" class="btn btn--sm" type="button">
+              ⏷ Filters
+            </button>
+            <div id="filterBar" class="filter-bar hidden">
+              <div class="filter-row">
+                <div class="filter-group">
+                  <label class="muted" for="filterArea">Area</label>
+                  <select id="filterArea">
+                    <option value="">All</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <label class="muted" for="filterCategory">Category</label>
+                  <select id="filterCategory">
+                    <option value="">All</option>
+                    <option value="JY">JY</option>
+                    <option value="CC">CC</option>
+                    <option value="Youth">Youth</option>
+                    <option value="Parents">Parents</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <label class="muted" for="filterActivityType"
+                    >Activity Type</label
+                  >
+                  <select id="filterActivityType">
+                    <option value="">All</option>
+                    <option value="JY">JY</option>
+                    <option value="CC">CC</option>
+                    <option value="StudyCircle">Study Circle</option>
+                    <option value="Devotional">Devotional</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <label class="muted" for="filterRuhiMin">Ruhi Level</label>
+                  <div style="display: flex; gap: 0.25rem; align-items: center">
+                    <input
+                      id="filterRuhiMin"
+                      type="number"
+                      min="0"
+                      max="12"
+                      placeholder="Min"
+                      class="filter-input"
+                    />
+                    <span class="muted">–</span>
+                    <input
+                      id="filterRuhiMax"
+                      type="number"
+                      min="0"
+                      max="12"
+                      placeholder="Max"
+                      class="filter-input"
+                    />
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <label class="muted" for="filterJYText">JY Text</label>
+                  <select id="filterJYText">
+                    <option value="">All</option>
+                    <option value="Book 1">Book 1</option>
+                    <option value="Book 2">Book 2</option>
+                    <option value="Book 3">Book 3</option>
+                    <option value="Book 4">Book 4</option>
+                    <option value="Book 5">Book 5</option>
+                    <option value="Book 6">Book 6</option>
+                    <option value="Book 7">Book 7</option>
+                  </select>
+                </div>
+              </div>
+              <button id="clearFilters" class="btn btn--sm" type="button">
+                Clear All
+              </button>
             </div>
           </div>
 
@@ -81,7 +154,11 @@
             <div class="form-row">
               <input id="importFile" type="file" accept=".json,.csv" />
             </div>
-            <p class="hint">CSV columns: name,area,note,categories</p>
+            <p class="hint">
+              CSV columns: name, area, note, categories, connectedActivities,
+              jyTexts, studyCircleBooks, ruhiLevel, familyId, familyName,
+              ageGroup, schoolName, employmentStatus, participationStatus
+            </p>
           </div>
         </section>
       </main>
@@ -105,11 +182,129 @@
             <div class="form-row">
               <input id="itemArea" type="text" placeholder="Area" />
             </div>
+
+            <div class="form-row">
+              <label class="muted" for="familySelect">Family</label>
+              <select id="familySelect">
+                <option value="">No Family</option>
+                <!-- Dynamically populated with families -->
+              </select>
+            </div>
+
+            <div class="form-row">
+              <label class="muted" for="ageGroup">Age Group</label>
+              <select id="ageGroup">
+                <option value="child">Child</option>
+                <option value="JY">JY</option>
+                <option value="youth">Youth</option>
+                <option value="adult" selected>Adult</option>
+                <option value="elder">Elder</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <label class="muted" for="schoolName"
+                >School Name (optional)</label
+              >
+              <input id="schoolName" type="text" placeholder="School name" />
+            </div>
+
+            <div class="form-row">
+              <label class="muted" for="employmentStatus"
+                >Employment Status</label
+              >
+              <select id="employmentStatus">
+                <option value="student">Student</option>
+                <option value="employed" selected>Employed</option>
+                <option value="unemployed">Unemployed</option>
+                <option value="retired">Retired</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <label class="muted" for="participationStatus"
+                >Participation Status</label
+              >
+              <select id="participationStatus">
+                <option value="active" selected>Active</option>
+                <option value="occasional">Occasional</option>
+                <option value="lapsed">Lapsed</option>
+                <option value="new">New</option>
+              </select>
+            </div>
+
             <div class="chips">
               <label><input type="checkbox" value="JY" /> JY</label>
               <label><input type="checkbox" value="CC" /> CC</label>
               <label><input type="checkbox" value="Youth" /> Youth</label>
               <label><input type="checkbox" value="Parents" /> Parents</label>
+            </div>
+
+            <!-- New fields for person -->
+            <div class="form-row">
+              <label class="muted" for="connectedActivities"
+                >Connected Activities</label
+              >
+              <select id="connectedActivities" multiple size="3">
+                <!-- Dynamically populated with activities -->
+              </select>
+              <small class="hint">Hold Ctrl/Cmd to select multiple</small>
+            </div>
+
+            <div class="form-row">
+              <label class="muted">JY Texts Completed</label>
+              <div class="chips">
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 1" />
+                  Book 1</label
+                >
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 2" />
+                  Book 2</label
+                >
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 3" />
+                  Book 3</label
+                >
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 4" />
+                  Book 4</label
+                >
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 5" />
+                  Book 5</label
+                >
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 6" />
+                  Book 6</label
+                >
+                <label
+                  ><input type="checkbox" class="jy-text-cb" value="Book 7" />
+                  Book 7</label
+                >
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="muted" for="studyCircleBooks"
+                >Study Circle Books</label
+              >
+              <textarea
+                id="studyCircleBooks"
+                rows="2"
+                placeholder="e.g., Ruhi Book 1, Book 2"
+              ></textarea>
+            </div>
+
+            <div class="form-row">
+              <label class="muted" for="ruhiLevel">Ruhi Level</label>
+              <input
+                id="ruhiLevel"
+                type="number"
+                min="0"
+                max="12"
+                placeholder="0-12"
+              />
             </div>
           </div>
           <div id="activityFields" class="hidden">

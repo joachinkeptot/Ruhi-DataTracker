@@ -25,30 +25,217 @@ const exportRoomCsv = document.getElementById("exportRoomCsv");
 const exportAllJson = document.getElementById("exportAllJson");
 const importFile = document.getElementById("importFile");
 const roomStats = document.getElementById("roomStats");
-const tabButtons = document.querySelectorAll("[data-tab]");
 const searchInput = document.getElementById("searchInput");
 const statsBreakdown = document.getElementById("statsBreakdown");
 const statsContent = document.getElementById("statsContent");
+const viewTabs = document.querySelectorAll("[data-view]");
 
 const STORAGE_KEY = "roommap_ops_single_v2";
-const API_BASE = "http://localhost:5000/api";
-const USE_BACKEND = true; // Set to false to use localStorage only
+const API_BASE = "http://localhost:5001/api";
+const USE_BACKEND = false; // Set to false to use localStorage only
 
 const categories = ["JY", "CC", "Youth", "Parents"];
 
+// Connection types enum
+const CONNECTION_TYPES = [
+  "family",
+  "school",
+  "work",
+  "neighborhood",
+  "activity",
+  "friendship",
+];
+const AGE_GROUPS = ["child", "JY", "youth", "adult", "elder"];
+const EMPLOYMENT_STATUSES = ["student", "employed", "unemployed", "retired"];
+const PARTICIPATION_STATUSES = ["active", "occasional", "lapsed", "new"];
+
 let filteredItems = []; // track filtered results
+
+// Filter state
+const filterState = {
+  area: "",
+  category: "",
+  activityType: "",
+  ruhiMin: null,
+  ruhiMax: null,
+  jyText: "",
+};
+
+function populateFilterAreaDropdown() {
+  const filterArea = document.getElementById("filterArea");
+  if (!filterArea) return;
+  const currentVal = filterArea.value;
+  const areas = getAreaList();
+  filterArea.innerHTML = '<option value="">All</option>';
+  areas.forEach((area) => {
+    const opt = document.createElement("option");
+    opt.value = area;
+    opt.textContent = area;
+    filterArea.appendChild(opt);
+  });
+  filterArea.value = currentVal;
+}
+
+function readFilterState() {
+  const filterArea = document.getElementById("filterArea");
+  const filterCategory = document.getElementById("filterCategory");
+  const filterActivityType = document.getElementById("filterActivityType");
+  const filterRuhiMin = document.getElementById("filterRuhiMin");
+  const filterRuhiMax = document.getElementById("filterRuhiMax");
+  const filterJYText = document.getElementById("filterJYText");
+
+  filterState.area = filterArea ? filterArea.value : "";
+  filterState.category = filterCategory ? filterCategory.value : "";
+  filterState.activityType = filterActivityType ? filterActivityType.value : "";
+  filterState.ruhiMin =
+    filterRuhiMin && filterRuhiMin.value !== ""
+      ? parseInt(filterRuhiMin.value)
+      : null;
+  filterState.ruhiMax =
+    filterRuhiMax && filterRuhiMax.value !== ""
+      ? parseInt(filterRuhiMax.value)
+      : null;
+  filterState.jyText = filterJYText ? filterJYText.value : "";
+}
+
+function clearAllFilters() {
+  const ids = [
+    "filterArea",
+    "filterCategory",
+    "filterActivityType",
+    "filterJYText",
+  ];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const nums = ["filterRuhiMin", "filterRuhiMax"];
+  nums.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  filterState.area = "";
+  filterState.category = "";
+  filterState.activityType = "";
+  filterState.ruhiMin = null;
+  filterState.ruhiMax = null;
+  filterState.jyText = "";
+  renderCanvas();
+  updateStats();
+}
+
+function applyFiltersToList(items, forceType) {
+  const type =
+    forceType || (state.viewMode === "activities" ? "activities" : "people");
+
+  return items.filter((item) => {
+    if (type === "people") {
+      // Area filter
+      if (filterState.area && (item.area || "").trim() !== filterState.area)
+        return false;
+      // Category filter
+      if (
+        filterState.category &&
+        !(item.categories || []).includes(filterState.category)
+      )
+        return false;
+      // Ruhi level filter
+      const level = item.ruhiLevel || 0;
+      if (filterState.ruhiMin !== null && level < filterState.ruhiMin)
+        return false;
+      if (filterState.ruhiMax !== null && level > filterState.ruhiMax)
+        return false;
+      // JY text filter
+      if (
+        filterState.jyText &&
+        !(item.jyTextsCompleted || []).includes(filterState.jyText)
+      )
+        return false;
+    } else {
+      // Activity type filter
+      if (filterState.activityType && item.type !== filterState.activityType)
+        return false;
+    }
+    return true;
+  });
+}
 
 const state = {
   people: [],
   activities: [],
+  families: [], // NEW: families entity
   selected: { type: "people", id: null },
   groupPositions: new Map(), // track bubble/group center positions
+  viewMode: "areas", // current view: 'areas', 'cohorts', or 'activities'
+  cohortViewMode: "categories", // 'categories' or 'families' - for Cohorts tab
 };
 
-let activeTab = "people";
 let dragState = null;
 let draggedBubble = null; // track which bubble is being dragged
 let editingPersonId = null; // track if we're editing a person
+
+function switchView(view) {
+  state.viewMode = view;
+
+  // Update tab styling
+  document.querySelectorAll("[data-view]").forEach((tab) => {
+    tab.classList.toggle("tab--active", tab.dataset.view === view);
+  });
+
+  // Show/hide cohort view toggle button
+  const cohortViewToggle = document.getElementById("cohortViewToggle");
+  if (cohortViewToggle) {
+    cohortViewToggle.style.display =
+      view === "cohorts" ? "inline-block" : "none";
+    cohortViewToggle.textContent = `View: ${state.cohortViewMode === "categories" ? "Categories" : "Families"}`;
+  }
+
+  // Show/hide relevant filter fields based on view
+  const peopleFilters = [
+    "filterArea",
+    "filterCategory",
+    "filterRuhiMin",
+    "filterRuhiMax",
+    "filterJYText",
+  ];
+  const activityFilters = ["filterActivityType"];
+
+  peopleFilters.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el)
+      el.closest(".filter-group").style.display =
+        view === "activities" ? "none" : "";
+  });
+  activityFilters.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el)
+      el.closest(".filter-group").style.display =
+        view === "activities" ? "" : "none";
+  });
+
+  populateFilterAreaDropdown();
+  renderCanvas();
+  updateStats();
+}
+
+function getAreaList() {
+  const areas = new Set();
+  state.people.forEach((person) => {
+    if (person.area && person.area.trim()) {
+      areas.add(person.area.trim());
+    }
+  });
+  return Array.from(areas).sort();
+}
+
+function updateAreaTabs() {
+  // Keep this function for backwards compatibility but make it do nothing
+  // since we now have fixed tabs
+}
+
+function switchArea(area) {
+  // Deprecated: keeping for backwards compatibility
+}
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10);
@@ -58,6 +245,7 @@ async function saveState() {
   const dataToSave = {
     people: state.people,
     activities: state.activities,
+    families: state.families, // NEW: persist families
     selected: state.selected,
     groupPositions: Object.fromEntries(state.groupPositions),
   };
@@ -116,89 +304,173 @@ function applyLoadedData(data) {
       area: person.area || person.street || person.address || "",
     }));
     state.activities = Array.isArray(data.activities) ? data.activities : [];
+    state.families = Array.isArray(data.families) ? data.families : [];
 
     if (data.groupPositions && typeof data.groupPositions === "object") {
       state.groupPositions = new Map(Object.entries(data.groupPositions));
     }
-    return;
-  }
-
-  if (data.rooms && typeof data.rooms === "object") {
-    const rooms = Object.values(data.rooms);
-    const activeRoom = rooms.find((room) => room.id === data.activeRoomId);
-    const fallbackRoom = activeRoom || rooms[0];
-    state.people = (fallbackRoom?.people || []).map((person) => ({
-      ...person,
-      area: person.area || person.street || person.address || "",
-    }));
-    state.activities = [];
   }
 }
 
 function updateStats() {
-  roomStats.textContent = `People: ${state.people.length} | Activities: ${state.activities.length}`;
+  roomStats.textContent = `People: ${state.people.length} | Families: ${state.families.length} | Activities: ${state.activities.length}`;
   updateStatsBreakdown();
 }
 
 function updateStatsBreakdown() {
-  if (activeTab === "people") {
-    const counts = { JY: 0, CC: 0, Youth: 0, Parents: 0 };
-    state.people.forEach((person) => {
-      (person.categories || ["Unassigned"]).forEach((cat) => {
-        if (counts.hasOwnProperty(cat)) counts[cat]++;
-      });
+  if (state.viewMode === "areas") {
+    // Show people stats by area
+    const areas = getAreaList();
+    const areaStats = {};
+    areas.forEach((area) => {
+      areaStats[area] = state.people.filter((p) => p.area === area).length;
     });
+
     statsContent.innerHTML = `
-      <p>JY: ${counts.JY}</p>
-      <p>CC: ${counts.CC}</p>
-      <p>Youth: ${counts.Youth}</p>
-      <p>Parents: ${counts.Parents}</p>
+      <h5>People by Area</h5>
+      ${areas.map((area) => `<p>${area}: ${areaStats[area]}</p>`).join("")}
+      ${areas.length === 0 ? "<p>No areas defined</p>" : ""}
     `;
     statsBreakdown.classList.remove("hidden");
-  } else {
+  } else if (state.viewMode === "cohorts") {
+    // Show people stats by categories and Ruhi levels OR by families
+    if (state.cohortViewMode === "families") {
+      // Family view
+      const familyCounts = {};
+      const noFamily = state.people.filter((p) => !p.familyId).length;
+
+      state.families.forEach((family) => {
+        const count = state.people.filter(
+          (p) => p.familyId === family.id,
+        ).length;
+        familyCounts[family.familyName] = count;
+      });
+
+      const sortedFamilies = Object.keys(familyCounts).sort();
+
+      statsContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h5 style="margin: 0;">Families</h5>
+          <button id="addFamilyBtn" class="btn btn--sm btn--primary">+ Family</button>
+        </div>
+        ${sortedFamilies.map((name) => `<p>${name}: ${familyCounts[name]} members</p>`).join("")}
+        ${noFamily > 0 ? `<p><em>No Family: ${noFamily}</em></p>` : ""}
+        ${state.families.length === 0 ? "<p>No families defined</p>" : ""}
+      `;
+
+      // Add listener for add family button
+      const addFamilyBtn = document.getElementById("addFamilyBtn");
+      if (addFamilyBtn) {
+        addFamilyBtn.addEventListener("click", openFamilyModal);
+      }
+    } else {
+      // Category view (original)
+      const counts = { JY: 0, CC: 0, Youth: 0, Parents: 0 };
+      const ruhiCounts = {};
+
+      state.people.forEach((person) => {
+        (person.categories || ["Unassigned"]).forEach((cat) => {
+          if (counts.hasOwnProperty(cat)) counts[cat]++;
+        });
+
+        const level = person.ruhiLevel || 0;
+        ruhiCounts[level] = (ruhiCounts[level] || 0) + 1;
+      });
+
+      const sortedRuhiLevels = Object.keys(ruhiCounts).sort(
+        (a, b) => parseInt(b) - parseInt(a),
+      );
+
+      statsContent.innerHTML = `
+        <h5>Cohorts</h5>
+        <p>JY: ${counts.JY}</p>
+        <p>CC: ${counts.CC}</p>
+        <p>Youth: ${counts.Youth}</p>
+        <p>Parents: ${counts.Parents}</p>
+        <h5 style="margin-top: 1rem;">Ruhi Levels</h5>
+        ${sortedRuhiLevels.map((level) => `<p>Level ${level}: ${ruhiCounts[level]}</p>`).join("")}
+      `;
+    }
+    statsBreakdown.classList.remove("hidden");
+  } else if (state.viewMode === "activities") {
+    // Show activity stats
     const counts = { JY: 0, CC: 0, StudyCircle: 0, Devotional: 0 };
+    const participationCount = new Map();
+
     state.activities.forEach((activity) => {
       if (counts.hasOwnProperty(activity.type)) counts[activity.type]++;
+
+      // Count how many people are connected to each activity
+      const connectedPeople = state.people.filter((p) =>
+        (p.connectedActivities || []).includes(activity.id),
+      ).length;
+      participationCount.set(activity.id, connectedPeople);
     });
+
+    const totalParticipation = Array.from(participationCount.values()).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+    const avgParticipation =
+      state.activities.length > 0
+        ? (totalParticipation / state.activities.length).toFixed(1)
+        : 0;
+
     statsContent.innerHTML = `
+      <h5>Activity Types</h5>
       <p>JY: ${counts.JY}</p>
       <p>CC: ${counts.CC}</p>
       <p>Study Circle: ${counts.StudyCircle}</p>
       <p>Devotional: ${counts.Devotional}</p>
+      <h5 style="margin-top: 1rem;">Participation</h5>
+      <p>Total Connections: ${totalParticipation}</p>
+      <p>Avg per Activity: ${avgParticipation}</p>
     `;
     statsBreakdown.classList.remove("hidden");
+  } else {
+    statsBreakdown.classList.add("hidden");
   }
 }
 
 function getActiveItems() {
-  return activeTab === "people" ? state.people : state.activities;
+  if (state.viewMode === "activities") {
+    return state.activities;
+  }
+  return state.people;
 }
 
 function filterItems() {
   const query = searchInput.value.toLowerCase().trim();
-  const items = getActiveItems();
+  let items = getActiveItems();
 
-  if (!query) {
-    filteredItems = items;
-    return items;
+  // Apply text search first
+  if (query) {
+    items = items.filter((item) => {
+      const name = item.name.toLowerCase();
+      const area = (item.area || "").toLowerCase();
+      const categoriesStr = (item.categories || []).join(" ").toLowerCase();
+      const type = (item.type || "").toLowerCase();
+      const leader = (item.leader || "").toLowerCase();
+      const studyBooks = (item.studyCircleBooks || "").toLowerCase();
+      const jyTexts = (item.jyTextsCompleted || []).join(" ").toLowerCase();
+
+      return (
+        name.includes(query) ||
+        area.includes(query) ||
+        categoriesStr.includes(query) ||
+        type.includes(query) ||
+        leader.includes(query) ||
+        studyBooks.includes(query) ||
+        jyTexts.includes(query)
+      );
+    });
   }
 
-  filteredItems = items.filter((item) => {
-    const name = item.name.toLowerCase();
-    const area = (item.area || "").toLowerCase();
-    const categories = (item.categories || []).join(" ").toLowerCase();
-    const type = (item.type || "").toLowerCase();
-    const leader = (item.leader || "").toLowerCase();
+  // Apply structured filters
+  readFilterState();
+  items = applyFiltersToList(items);
 
-    return (
-      name.includes(query) ||
-      area.includes(query) ||
-      categories.includes(query) ||
-      type.includes(query) ||
-      leader.includes(query)
-    );
-  });
-
+  filteredItems = items;
   return filteredItems;
 }
 
@@ -228,14 +500,17 @@ function renderCanvas() {
   svg.setAttribute("height", "100%");
   canvas.appendChild(svg);
 
-  const items = filterItems();
+  // filterItems() already selects the right source list based on viewMode
+  const displayItems = filterItems();
+
   const nodeMap = new Map();
-  items.forEach((item) => {
+  displayItems.forEach((item) => {
     const node = document.createElement("div");
     node.className = "node";
 
     // Add color-coding classes
-    if (activeTab === "people") {
+    const isPerson = state.viewMode === "areas" || state.viewMode === "cohorts";
+    if (isPerson) {
       const primaryCat =
         (item.categories && item.categories[0]) || "Unassigned";
       const colorClass = `node--${primaryCat.toLowerCase()}`;
@@ -245,11 +520,16 @@ function renderCanvas() {
       node.classList.add(colorClass);
     }
 
-    if (state.selected.id === item.id && state.selected.type === activeTab) {
+    if (
+      state.selected.id === item.id &&
+      ((isPerson && state.selected.type === "people") ||
+        (!isPerson && state.selected.type === "activities"))
+    ) {
       node.classList.add("node--selected");
     }
+
     node.dataset.id = item.id;
-    node.dataset.type = activeTab;
+    node.dataset.type = isPerson ? "people" : "activities";
     node.style.left = `${item.position.x}px`;
     node.style.top = `${item.position.y}px`;
 
@@ -259,10 +539,10 @@ function renderCanvas() {
 
     const meta = document.createElement("div");
     meta.className = "node__meta";
-    if (activeTab === "people") {
-      meta.textContent = item.area || "No area";
-    } else {
+    if (state.viewMode === "activities") {
       meta.textContent = item.type ? `${item.type}` : "Activity";
+    } else {
+      meta.textContent = item.area || "No area";
     }
 
     node.appendChild(title);
@@ -271,7 +551,8 @@ function renderCanvas() {
     nodeMap.set(item.id, node);
   });
 
-  drawAreaLinks(svg, items, nodeMap);
+  // Area links and bubbles disabled for now
+  // drawAreaLinks(svg, displayItems, nodeMap);
 }
 
 function drawAreaLinks(svg, items, nodeMap) {
@@ -374,11 +655,44 @@ function renderDetails() {
   }
 
   if (state.selected.type === "people") {
+    // Get activity names from IDs
+    const activityNames =
+      (item.connectedActivities || [])
+        .map((actId) => {
+          const activity = state.activities.find((a) => a.id === actId);
+          return activity ? activity.name : null;
+        })
+        .filter((name) => name)
+        .join(", ") || "-";
+
+    // Get family name
+    const familyName = item.familyId
+      ? state.families.find((f) => f.id === item.familyId)?.familyName ||
+        "Unknown Family"
+      : "-";
+
+    // Get connections count
+    const connectionsCount = (item.connections || []).length;
+    const homeVisitsCount = (item.homeVisits || []).length;
+    const conversationsCount = (item.conversations || []).length;
+
     detailPanel.innerHTML = `
       <h4>${item.name}</h4>
-      <p>Area: ${item.area || "-"}</p>
-      <p>Categories: ${(item.categories || []).join(", ") || "-"}</p>
-      <p>Notes: ${item.note || "-"}</p>
+      <p><strong>Family:</strong> ${familyName}</p>
+      <p><strong>Area:</strong> ${item.area || "-"}</p>
+      <p><strong>Age Group:</strong> ${item.ageGroup || "-"}</p>
+      <p><strong>Categories:</strong> ${(item.categories || []).join(", ") || "-"}</p>
+      <p><strong>Employment:</strong> ${item.employmentStatus || "-"}</p>
+      ${item.schoolName ? `<p><strong>School:</strong> ${item.schoolName}</p>` : ""}
+      <p><strong>Participation:</strong> ${item.participationStatus || "-"}</p>
+      <p><strong>Connected Activities:</strong> ${activityNames}</p>
+      <p><strong>Connections:</strong> ${connectionsCount} person(s)</p>
+      <p><strong>Home Visits:</strong> ${homeVisitsCount}</p>
+      <p><strong>Conversations:</strong> ${conversationsCount}</p>
+      <p><strong>JY Texts:</strong> ${(item.jyTextsCompleted || []).join(", ") || "-"}</p>
+      <p><strong>Study Circles:</strong> ${item.studyCircleBooks || "-"}</p>
+      <p><strong>Ruhi Level:</strong> ${item.ruhiLevel || "0"}</p>
+      <p><strong>Notes:</strong> ${item.note || "-"}</p>
       <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
         <button id="editPersonBtn" class="btn btn--primary" style="flex: 1;">Edit</button>
         <button id="deletePersonBtn" class="btn" style="flex: 1; background: #ef4444; color: white;">Delete</button>
@@ -440,10 +754,54 @@ function editPerson(personId) {
   itemArea.value = person.area || "";
   itemNote.value = person.note || "";
 
-  // Set categories checkboxes
-  peopleFields.querySelectorAll("input[type=checkbox]").forEach((checkbox) => {
-    checkbox.checked = (person.categories || []).includes(checkbox.value);
+  // Populate connected activities dropdown
+  const connectedActivitiesSelect = document.getElementById(
+    "connectedActivities",
+  );
+  connectedActivitiesSelect.innerHTML = "";
+  state.activities.forEach((activity) => {
+    const option = document.createElement("option");
+    option.value = activity.id;
+    option.textContent = `${activity.name} (${activity.type})`;
+    option.selected = (person.connectedActivities || []).includes(activity.id);
+    connectedActivitiesSelect.appendChild(option);
   });
+
+  // Set categories checkboxes (excluding JY text checkboxes)
+  peopleFields
+    .querySelectorAll("input[type=checkbox]:not(.jy-text-cb)")
+    .forEach((checkbox) => {
+      checkbox.checked = (person.categories || []).includes(checkbox.value);
+    });
+
+  // Set JY texts checkboxes
+  peopleFields.querySelectorAll(".jy-text-cb").forEach((checkbox) => {
+    checkbox.checked = (person.jyTextsCompleted || []).includes(checkbox.value);
+  });
+
+  // Set other new fields
+  document.getElementById("studyCircleBooks").value =
+    person.studyCircleBooks || "";
+  document.getElementById("ruhiLevel").value = person.ruhiLevel || "";
+
+  // Set family dropdown
+  const familySelect = document.getElementById("familySelect");
+  if (familySelect) familySelect.value = person.familyId || "";
+
+  // Set new enhanced fields
+  const ageGroupSelect = document.getElementById("ageGroup");
+  if (ageGroupSelect) ageGroupSelect.value = person.ageGroup || "adult";
+
+  const schoolNameInput = document.getElementById("schoolName");
+  if (schoolNameInput) schoolNameInput.value = person.schoolName || "";
+
+  const employmentSelect = document.getElementById("employmentStatus");
+  if (employmentSelect)
+    employmentSelect.value = person.employmentStatus || "employed";
+
+  const participationSelect = document.getElementById("participationStatus");
+  if (participationSelect)
+    participationSelect.value = person.participationStatus || "active";
 
   toggleModalFields();
   itemName.focus();
@@ -454,6 +812,7 @@ function deletePerson(personId) {
 
   state.people = state.people.filter((p) => p.id !== personId);
   state.selected = { type: "people", id: null };
+  updateAreaTabs();
   renderCanvas();
   renderDetails();
   updateStats();
@@ -471,6 +830,51 @@ function deleteActivity(activityId) {
   saveState();
 }
 
+// Family management functions
+function openFamilyModal() {
+  const familyName = prompt("Enter family name:");
+  if (!familyName || !familyName.trim()) return;
+
+  const primaryArea = prompt("Enter primary area (optional):") || "";
+  const phone = prompt("Enter phone (optional):") || "";
+  const email = prompt("Enter email (optional):") || "";
+  const notes = prompt("Enter notes (optional):") || "";
+
+  const family = {
+    id: generateId(),
+    familyName: familyName.trim(),
+    primaryArea: primaryArea.trim(),
+    phone: phone.trim(),
+    email: email.trim(),
+    notes: notes.trim(),
+  };
+
+  state.families.push(family);
+  updateStats();
+  saveState();
+  alert(`Family "${family.familyName}" added successfully!`);
+}
+
+function deleteFamily(familyId) {
+  if (
+    !confirm(
+      "Are you sure you want to delete this family? People will be unlinked.",
+    )
+  )
+    return;
+
+  // Unlink people from this family
+  state.people.forEach((person) => {
+    if (person.familyId === familyId) {
+      person.familyId = null;
+    }
+  });
+
+  state.families = state.families.filter((f) => f.id !== familyId);
+  updateStats();
+  saveState();
+}
+
 function openModal() {
   editingPersonId = null;
   itemModal.classList.remove("hidden");
@@ -478,6 +882,31 @@ function openModal() {
   itemType.value = "people";
   activityType.value = "";
   toggleModalFields();
+
+  // Populate connected activities dropdown
+  const connectedActivitiesSelect = document.getElementById(
+    "connectedActivities",
+  );
+  connectedActivitiesSelect.innerHTML = "";
+  state.activities.forEach((activity) => {
+    const option = document.createElement("option");
+    option.value = activity.id;
+    option.textContent = `${activity.name} (${activity.type})`;
+    connectedActivitiesSelect.appendChild(option);
+  });
+
+  // Populate family dropdown
+  const familySelect = document.getElementById("familySelect");
+  if (familySelect) {
+    familySelect.innerHTML = '<option value="">No Family</option>';
+    state.families.forEach((family) => {
+      const option = document.createElement("option");
+      option.value = family.id;
+      option.textContent = family.familyName;
+      familySelect.appendChild(option);
+    });
+  }
+
   itemName.focus();
 }
 
@@ -620,14 +1049,37 @@ function downloadFile(filename, content, type) {
 }
 
 function exportPeopleToCsv() {
-  const rows = ["name,area,note,categories"];
+  const rows = [
+    "name,area,note,categories,connectedActivities,jyTexts,studyCircleBooks,ruhiLevel,familyId,familyName,ageGroup,schoolName,employmentStatus,participationStatus",
+  ];
   state.people.forEach((person) => {
     const categoriesText = (person.categories || []).join("|");
+    // Map activity IDs to names for readable export
+    const activityNames = (person.connectedActivities || [])
+      .map((id) => {
+        const act = state.activities.find((a) => a.id === id);
+        return act ? act.name : id;
+      })
+      .join("|");
+    const jyTexts = (person.jyTextsCompleted || []).join("|");
+    const familyName = person.familyId
+      ? state.families.find((f) => f.id === person.familyId)?.familyName || ""
+      : "";
     const row = [
       person.name,
       person.area || "",
       person.note || "",
       categoriesText,
+      activityNames,
+      jyTexts,
+      person.studyCircleBooks || "",
+      person.ruhiLevel || 0,
+      person.familyId || "",
+      familyName,
+      person.ageGroup || "",
+      person.schoolName || "",
+      person.employmentStatus || "",
+      person.participationStatus || "",
     ]
       .map((value) => `"${String(value).replace(/"/g, '""')}"`)
       .join(",");
@@ -673,6 +1125,30 @@ function importFromCsv(text) {
           .map((item) => item.trim())
           .filter(Boolean)
       : ["Unassigned"];
+
+    // Parse new fields
+    const jyTextsText = record.jyTexts || "";
+    const jyTextsList = jyTextsText
+      ? jyTextsText
+          .split("|")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+
+    // Try to match activity names back to IDs
+    const actNamesText = record.connectedActivities || "";
+    const connectedActivities = actNamesText
+      ? actNamesText
+          .split("|")
+          .map((name) => {
+            const match = state.activities.find(
+              (a) => a.name.toLowerCase() === name.trim().toLowerCase(),
+            );
+            return match ? match.id : null;
+          })
+          .filter(Boolean)
+      : [];
+
     state.people.push({
       id: generateId(),
       name: record.name || "Unknown",
@@ -680,6 +1156,18 @@ function importFromCsv(text) {
       note: record.note || "",
       categories: categoriesList,
       position: null,
+      connectedActivities: connectedActivities,
+      jyTextsCompleted: jyTextsList,
+      studyCircleBooks: record.studyCircleBooks || "",
+      ruhiLevel: parseInt(record.ruhiLevel) || 0,
+      familyId: record.familyId || null,
+      ageGroup: record.ageGroup || "adult",
+      schoolName: record.schoolName || null,
+      employmentStatus: record.employmentStatus || "employed",
+      participationStatus: record.participationStatus || "active",
+      homeVisits: [],
+      conversations: [],
+      connections: [],
     });
   });
 }
@@ -691,8 +1179,18 @@ function importFromJson(text) {
     state.people = data.people.map((person) => ({
       ...person,
       area: person.area || person.street || person.address || "",
+      // Ensure new fields have default values
+      familyId: person.familyId || null,
+      ageGroup: person.ageGroup || "adult",
+      schoolName: person.schoolName || null,
+      employmentStatus: person.employmentStatus || "employed",
+      participationStatus: person.participationStatus || "active",
+      homeVisits: person.homeVisits || [],
+      conversations: person.conversations || [],
+      connections: person.connections || [],
     }));
     state.activities = Array.isArray(data.activities) ? data.activities : [];
+    state.families = Array.isArray(data.families) ? data.families : [];
   }
 }
 
@@ -713,8 +1211,37 @@ itemForm.addEventListener("submit", (event) => {
 
   if (type === "people") {
     const cats = Array.from(
-      peopleFields.querySelectorAll("input[type=checkbox]:checked"),
+      peopleFields.querySelectorAll(
+        "input[type=checkbox]:checked:not(.jy-text-cb)",
+      ),
     ).map((input) => input.value);
+
+    // Get new fields
+    const connectedActivitiesSelect = document.getElementById(
+      "connectedActivities",
+    );
+    const connectedActivities = Array.from(
+      connectedActivitiesSelect.selectedOptions,
+    ).map((opt) => opt.value);
+
+    const jyTextsCompleted = Array.from(
+      peopleFields.querySelectorAll(".jy-text-cb:checked"),
+    ).map((input) => input.value);
+
+    const studyCircleBooks = document
+      .getElementById("studyCircleBooks")
+      .value.trim();
+    const ruhiLevel = parseInt(document.getElementById("ruhiLevel").value) || 0;
+
+    // Get new enhanced fields
+    const familyId = document.getElementById("familySelect")?.value || null;
+    const ageGroup = document.getElementById("ageGroup")?.value || "adult";
+    const schoolName =
+      document.getElementById("schoolName")?.value.trim() || null;
+    const employmentStatus =
+      document.getElementById("employmentStatus")?.value || "employed";
+    const participationStatus =
+      document.getElementById("participationStatus")?.value || "active";
 
     if (editingPersonId) {
       // Edit existing person
@@ -724,6 +1251,19 @@ itemForm.addEventListener("submit", (event) => {
         person.area = itemArea.value.trim();
         person.note = note;
         person.categories = cats.length ? cats : ["Unassigned"];
+        person.connectedActivities = connectedActivities;
+        person.jyTextsCompleted = jyTextsCompleted;
+        person.studyCircleBooks = studyCircleBooks;
+        person.ruhiLevel = ruhiLevel;
+        person.familyId = familyId;
+        person.ageGroup = ageGroup;
+        person.schoolName = schoolName;
+        person.employmentStatus = employmentStatus;
+        person.participationStatus = participationStatus;
+        // Preserve existing homeVisits, conversations, connections if not editing them
+        person.homeVisits = person.homeVisits || [];
+        person.conversations = person.conversations || [];
+        person.connections = person.connections || [];
       }
       editingPersonId = null;
     } else {
@@ -735,6 +1275,18 @@ itemForm.addEventListener("submit", (event) => {
         note,
         categories: cats.length ? cats : ["Unassigned"],
         position: null,
+        connectedActivities: connectedActivities,
+        jyTextsCompleted: jyTextsCompleted,
+        studyCircleBooks: studyCircleBooks,
+        ruhiLevel: ruhiLevel,
+        familyId: familyId,
+        ageGroup: ageGroup,
+        schoolName: schoolName,
+        employmentStatus: employmentStatus,
+        participationStatus: participationStatus,
+        homeVisits: [],
+        conversations: [],
+        connections: [],
       };
       state.people.push(person);
       state.selected = { type: "people", id: person.id };
@@ -765,6 +1317,8 @@ itemForm.addEventListener("submit", (event) => {
   }
 
   closeModal();
+  updateAreaTabs();
+  populateFilterAreaDropdown();
   renderCanvas();
   renderDetails();
   updateStats();
@@ -791,22 +1345,73 @@ importFile.addEventListener("change", async (event) => {
     importFromCsv(text);
   }
   importFile.value = "";
+  updateAreaTabs();
+  populateFilterAreaDropdown();
   renderCanvas();
   renderDetails();
   updateStats();
   saveState();
 });
 
-tabButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const target = button.dataset.tab;
-    activeTab = target;
-    tabButtons.forEach((tab) => tab.classList.remove("tab--active"));
-    button.classList.add("tab--active");
-    renderCanvas();
-    renderDetails();
+// Setup view tab click handlers
+document.querySelectorAll("[data-view]").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    switchView(tab.dataset.view);
   });
 });
+
+// Filter toggle
+const filterToggle = document.getElementById("filterToggle");
+const filterBar = document.getElementById("filterBar");
+if (filterToggle && filterBar) {
+  filterToggle.addEventListener("click", () => {
+    filterBar.classList.toggle("hidden");
+    filterToggle.textContent = filterBar.classList.contains("hidden")
+      ? "⏷ Filters"
+      : "⏶ Filters";
+  });
+}
+
+// Filter change listeners
+[
+  "filterArea",
+  "filterCategory",
+  "filterActivityType",
+  "filterRuhiMin",
+  "filterRuhiMax",
+  "filterJYText",
+].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener("change", () => {
+      renderCanvas();
+      updateStats();
+    });
+    if (el.type === "number") {
+      el.addEventListener("input", () => {
+        renderCanvas();
+        updateStats();
+      });
+    }
+  }
+});
+
+// Clear filters button
+const clearFiltersBtn = document.getElementById("clearFilters");
+if (clearFiltersBtn) {
+  clearFiltersBtn.addEventListener("click", clearAllFilters);
+}
+
+// Cohort view toggle button
+const cohortViewToggle = document.getElementById("cohortViewToggle");
+if (cohortViewToggle) {
+  cohortViewToggle.addEventListener("click", () => {
+    state.cohortViewMode =
+      state.cohortViewMode === "categories" ? "families" : "categories";
+    cohortViewToggle.textContent = `View: ${state.cohortViewMode === "categories" ? "Categories" : "Families"}`;
+    updateStats();
+  });
+}
 
 // Auto-sync with backend every 3 seconds
 let syncInterval = null;
@@ -833,6 +1438,7 @@ async function startAutoSync() {
           remoteData.activities.length > localState.activities.length
         ) {
           applyLoadedData(remoteData);
+          updateAreaTabs();
           renderCanvas();
           renderDetails();
           updateStats();
@@ -849,9 +1455,17 @@ async function startAutoSync() {
 if (!loadState()) {
   state.people = [];
   state.activities = [];
+  state.families = [];
 }
 
+populateFilterAreaDropdown();
+// Initialize filter visibility for default view (areas)
+const actTypeFilterInit = document.getElementById("filterActivityType");
+if (actTypeFilterInit && actTypeFilterInit.closest(".filter-group")) {
+  actTypeFilterInit.closest(".filter-group").style.display = "none";
+}
 updateStats();
+updateAreaTabs();
 renderCanvas();
 renderDetails();
 startAutoSync();

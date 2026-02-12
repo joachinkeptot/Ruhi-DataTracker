@@ -1,0 +1,233 @@
+{
+  "people": [
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "28v858z3",
+      "name": "Joachin keptot",
+      "note": "Animator",
+      "position": {
+        "x": 26.58929363405366,
+        "y": 212.05491191380872
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "tgly2l86",
+      "name": "Kolaiah Keptot",
+      "note": "Teacher, Tutor",
+      "position": {
+        "x": 26.098740828490122,
+        "y": 146.5527279981136
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "stmkolou",
+      "name": "Kenoa Keptot",
+      "note": "",
+      "position": {
+        "x": 173.82882496981335,
+        "y": 13.607288572440666
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Parents"
+      ],
+      "id": "k0f1lqzu",
+      "name": "Laura Keptot",
+      "note": "",
+      "position": {
+        "x": 23.06441176443593,
+        "y": 11.49576210329434
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Parents"
+      ],
+      "id": "ivws1wxa",
+      "name": "James Keptot",
+      "note": "",
+      "position": {
+        "x": 27.175046408987043,
+        "y": 80.86974578678041
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "zl8c2lo7",
+      "name": "Adan Lavalle",
+      "note": "",
+      "position": {
+        "x": 1037.5554861547057,
+        "y": 16.908897338591373
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "hz65990l",
+      "name": "Sol Lavalle",
+      "note": "",
+      "position": {
+        "x": 1038.9500242164645,
+        "y": 80.79313794020652
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "lh1thk9a",
+      "name": "Ashley Lavalle",
+      "note": "",
+      "position": {
+        "x": 1039.2913422845186,
+        "y": 143.98140087866307
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "r5dl68f1",
+      "name": "Aires",
+      "note": "",
+      "position": {
+        "x": 488.94997650505684,
+        "y": 16.699012152291644
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "JY"
+      ],
+      "id": "i4cfiwiq",
+      "name": "Kayden",
+      "note": "",
+      "position": {
+        "x": 484.0040309410424,
+        "y": 77.17721211079353
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "4t774evl",
+      "name": "Kanei",
+      "note": "",
+      "position": {
+        "x": 485.8190499516693,
+        "y": 139.13834666239666
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Youth"
+      ],
+      "id": "y61bvt2l",
+      "name": "Gelila",
+      "note": "",
+      "position": {
+        "x": 771.7333984132468,
+        "y": 16.455342964795136
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "JY"
+      ],
+      "id": "3ea0f4cj",
+      "name": "Erza",
+      "note": "",
+      "position": {
+        "x": 772.8767708564917,
+        "y": 77.18844315066883
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "JY"
+      ],
+      "id": "y69ys4t0",
+      "name": "Elijah",
+      "note": "",
+      "position": {
+        "x": 21.77221520185799,
+        "y": 387.89651988821765
+      }
+    },
+    {
+      "area": "13 Street",
+      "categories": [
+        "Parents"
+      ],
+      "id": "ditixkxl",
+      "name": "Napoleon",
+      "note": "",
+      "position": {
+        "x": 299.7970572786285,
+        "y": 387.20462583153227
+      }
+    },
+    {
+      "id": "uw8tgfqj",
+      "name": "Twin",
+      "area": "13 Street",
+      "note": "",
+      "categories": [
+        "CC"
+      ],
+      "position": {
+        "x": 450.6236159473593,
+        "y": 387.3839182541002
+      }
+    },
+    {
+      "id": "h673cgkf",
+      "name": "Dream",
+      "area": "13 Street",
+      "note": "",
+      "categories": [
+        "CC"
+      ],
+      "position": {
+        "x": 689.4385111428344,
+        "y": 389.1939559945365
+      }
+    }
+  ],
+  "activities": [],
+  "selected": {
+    "type": "people",
+    "id": "k0f1lqzu"
+  },
+  "groupPositions": {},
+  "families": [],
+  "lastUpdated": "2026-02-11T17:26:38.329175"
+}

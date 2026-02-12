@@ -46,7 +46,9 @@ python3 -m http.server 8000
 
 Then open:
 
-- Your browser: `http://localhost:8000`
+- Your browser: `http://cd /Users/COOKIES/Tracker-
+source .venv/bin/activate
+python3 server.pylocalhost:8000`
 - Friend's browser: `http://[your-ip]:8000`
 
 ## Finding Your IP
@@ -144,3 +146,6 @@ Tracker-/
 ---
 
 **Built with ❤️ for collaborative tracking**
+
+python3 -m http.server
+8000

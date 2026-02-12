@@ -98,11 +98,12 @@ def clear_data():
         return jsonify({"error": "Failed to clear"}), 500
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5001))
     print("\n" + "="*50)
     print("🚀 RoomMap Ops Backend Server")
     print("="*50)
     print(f"📁 Data file: {DATA_FILE}")
-    print("🌐 API running on http://localhost:5000")
+    print(f"🌐 API running on http://localhost:{port}")
     print("\nEndpoints:")
     print("  GET  /api/health  - Health check")
     print("  GET  /api/data    - Fetch all data")
@@ -110,4 +111,4 @@ if __name__ == '__main__':
     print("  GET  /api/export  - Export as JSON")
     print("="*50 + "\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=port)
