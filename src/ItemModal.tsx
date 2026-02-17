@@ -365,7 +365,14 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                 <label className="muted">Age Group</label>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                   {(
-                    ["child", "JY", "youth", "adult", "elder"] as AgeGroup[]
+                    [
+                      "child",
+                      "JY",
+                      "youth",
+                      "adult",
+                      "parents",
+                      "elder",
+                    ] as AgeGroup[]
                   ).map((age) => (
                     <label
                       key={age}

@@ -5,7 +5,7 @@
 // ENUMS & TYPES - From Official Schema
 // ============================================================================
 
-export type AgeGroup = "child" | "JY" | "youth" | "adult" | "elder";
+export type AgeGroup = "child" | "JY" | "youth" | "adult" | "parents" | "elder";
 
 export type EmploymentStatus =
   | "student"
@@ -204,7 +204,8 @@ export type ViewMode =
   | "families"
   | "activities"
   | "homevisits"
-  | "analytics";
+  | "analytics"
+  | "forms";
 
 export type CohortViewMode = "categories" | "families" | "connections";
 
@@ -299,6 +300,22 @@ export interface SerializableState {
   viewMode?: ViewMode;
   cohortViewMode?: CohortViewMode;
   showConnections?: boolean;
+}
+
+// ============================================================================
+// FORM SUBMISSION TYPES
+// ============================================================================
+
+export type FormType = "person" | "homevisit" | "activity";
+
+export interface FormSubmission {
+  id: string;
+  formType: FormType;
+  submittedBy: string;
+  submittedAt: string;
+  data: any;
+  processed: boolean;
+  processedAt?: string;
 }
 
 // ============================================================================

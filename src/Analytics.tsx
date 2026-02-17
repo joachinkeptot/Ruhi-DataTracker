@@ -5,7 +5,10 @@ const Analytics: React.FC = () => {
   const { people, activities, families } = useApp();
 
   const metrics = useMemo(() => {
-    const ageGroupCounts: Record<string, number> = {};
+    const ageGroups = ["child", "JY", "youth", "adult", "parents", "elder"];
+    const ageGroupCounts: Record<string, number> = Object.fromEntries(
+      ageGroups.map((age) => [age, 0]),
+    );
     people.forEach((p) => {
       ageGroupCounts[p.ageGroup] = (ageGroupCounts[p.ageGroup] || 0) + 1;
     });
@@ -44,6 +47,7 @@ const Analytics: React.FC = () => {
       totalPeople: people.length,
       totalActivities: activities.length,
       totalFamilies: families.length,
+      ageGroups,
       ageGroupCounts,
       activityCounts,
       connectedPeople,
@@ -79,18 +83,16 @@ const Analytics: React.FC = () => {
         <div className="summary-card">
           <h3>👥 Age Groups</h3>
           <div className="breakdown-list">
-            {Object.entries(metrics.ageGroupCounts)
-              .sort(([, a], [, b]) => b - a)
-              .map(([age, count]) => (
-                <div key={age} className="breakdown-item">
-                  <span className={`chip chip--age-${age}`}>
-                    {age === "JY"
-                      ? "JY"
-                      : age.charAt(0).toUpperCase() + age.slice(1)}
-                  </span>
-                  <strong>{count}</strong>
-                </div>
-              ))}
+            {metrics.ageGroups.map((age) => (
+              <div key={age} className="breakdown-item">
+                <span className={`chip chip--age-${age}`}>
+                  {age === "JY"
+                    ? "JY"
+                    : age.charAt(0).toUpperCase() + age.slice(1)}
+                </span>
+                <strong>{metrics.ageGroupCounts[age]}</strong>
+              </div>
+            ))}
           </div>
         </div>
 

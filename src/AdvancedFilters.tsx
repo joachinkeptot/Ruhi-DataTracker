@@ -212,7 +212,14 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   <label className="muted">Age Groups</label>
                   <div className="checkbox-grid">
                     {(
-                      ["child", "JY", "youth", "adult", "elder"] as AgeGroup[]
+                      [
+                        "child",
+                        "JY",
+                        "youth",
+                        "adult",
+                        "parents",
+                        "elder",
+                      ] as AgeGroup[]
                     ).map((age) => (
                       <label key={age} className="checkbox-label">
                         <input

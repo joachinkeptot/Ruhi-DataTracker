@@ -81,6 +81,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     <option value="JY">JY</option>
                     <option value="youth">Youth</option>
                     <option value="adult">Adult</option>
+                    <option value="parents">Parents</option>
                     <option value="elder">Elder</option>
                   </select>
                 </div>

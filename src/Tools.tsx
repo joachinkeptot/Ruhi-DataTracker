@@ -65,6 +65,122 @@ export const Tools: React.FC = () => {
     downloadFile("people.csv", rows.join("\n"), "text/csv");
   };
 
+  const exportFamiliesToCsv = () => {
+    const rows = [
+      "familyName,primaryArea,phone,email,memberCount,lastContact,notes",
+    ];
+
+    families.forEach((family) => {
+      const row = [
+        family.familyName,
+        family.primaryArea || "",
+        family.phone || "",
+        family.email || "",
+        family.memberCount || 0,
+        family.lastContact || "",
+        family.notes || "",
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(",");
+
+      rows.push(row);
+    });
+
+    downloadFile("families.csv", rows.join("\n"), "text/csv");
+  };
+
+  const exportActivitiesToCsv = () => {
+    const rows = [
+      "name,type,area,facilitator,lastSessionDate,participants,averageAttendance,materials,notes",
+    ];
+
+    activities.forEach((activity) => {
+      const participantNames = activity.participantIds
+        .map((id: string) => people.find((p) => p.id === id)?.name || id)
+        .join("|");
+
+      const row = [
+        activity.name,
+        activity.type,
+        activity.area || "",
+        activity.facilitator || activity.leader || "",
+        activity.lastSessionDate || "",
+        participantNames,
+        activity.averageAttendance || 0,
+        activity.materials || "",
+        activity.notes || activity.note || "",
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(",");
+
+      rows.push(row);
+    });
+
+    downloadFile("activities.csv", rows.join("\n"), "text/csv");
+  };
+
+  const exportHomeVisitsToCsv = () => {
+    const rows = [
+      "personName,familyName,area,visitDate,visitors,purpose,notes,followUpDate,completed",
+    ];
+
+    people.forEach((person) => {
+      const familyName = person.familyId
+        ? families.find((f) => f.id === person.familyId)?.familyName || ""
+        : "";
+
+      (person.homeVisits || []).forEach((visit) => {
+        const row = [
+          person.name,
+          familyName,
+          person.area,
+          visit.date,
+          visit.visitors,
+          visit.purpose || "",
+          visit.notes || "",
+          visit.followUpDate || "",
+          visit.completed ? "Yes" : "No",
+        ]
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(",");
+
+        rows.push(row);
+      });
+    });
+
+    downloadFile("home_visits.csv", rows.join("\n"), "text/csv");
+  };
+
+  const exportConversationsToCsv = () => {
+    const rows = [
+      "personName,familyName,area,conversationDate,topic,notes,followUpDate",
+    ];
+
+    people.forEach((person) => {
+      const familyName = person.familyId
+        ? families.find((f) => f.id === person.familyId)?.familyName || ""
+        : "";
+
+      (person.conversations || []).forEach((conv) => {
+        const row = [
+          person.name,
+          familyName,
+          person.area,
+          conv.date,
+          conv.topic || "",
+          conv.notes || "",
+          conv.followUpDate || "",
+        ]
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(",");
+
+        rows.push(row);
+      });
+    });
+
+    downloadFile("conversations.csv", rows.join("\n"), "text/csv");
+  };
+
   const exportAllToJson = () => {
     const data = { people, activities, families };
     downloadFile(
@@ -88,8 +204,6 @@ export const Tools: React.FC = () => {
       } catch (error) {
         alert("Failed to import JSON file");
       }
-    } else if (file.name.endsWith(".csv")) {
-      alert("CSV import not yet implemented in React version");
     }
 
     if (fileInputRef.current) {
@@ -100,26 +214,59 @@ export const Tools: React.FC = () => {
   return (
     <div className="panel__section">
       <h2>Tools</h2>
-      <div className="form-row">
+
+      <h3
+        style={{ marginTop: "1rem", marginBottom: "0.5rem", fontSize: "1rem" }}
+      >
+        Export CSV Files
+      </h3>
+      <div
+        className="form-row"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "0.75rem",
+        }}
+      >
         <button className="btn" onClick={exportPeopleToCsv}>
-          Export People CSV
+          📄 Export People
+        </button>
+        <button className="btn" onClick={exportFamiliesToCsv}>
+          👨‍👩‍👧 Export Families
+        </button>
+        <button className="btn" onClick={exportActivitiesToCsv}>
+          🎯 Export Activities
+        </button>
+        <button className="btn" onClick={exportHomeVisitsToCsv}>
+          🏠 Export Home Visits
+        </button>
+        <button className="btn" onClick={exportConversationsToCsv}>
+          💬 Export Conversations
         </button>
         <button className="btn" onClick={exportAllToJson}>
-          Export All JSON
+          📦 Export All (JSON)
         </button>
       </div>
+
+      <h3
+        style={{
+          marginTop: "1.5rem",
+          marginBottom: "0.5rem",
+          fontSize: "1rem",
+        }}
+      >
+        Import JSON Backup
+      </h3>
       <div className="form-row">
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json,.csv"
+          accept=".json"
           onChange={handleFileImport}
         />
       </div>
       <p className="hint">
-        CSV columns: name, area, note, categories, connectedActivities, jyTexts,
-        studyCircleBooks, ruhiLevel, familyId, familyName, ageGroup, schoolName,
-        employmentStatus, participationStatus
+        Import a complete backup JSON file exported from this application.
       </p>
     </div>
   );

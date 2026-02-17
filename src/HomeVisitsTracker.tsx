@@ -10,7 +10,6 @@ export const HomeVisitsTracker: React.FC = () => {
   const [showAddConversation, setShowAddConversation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterArea, setFilterArea] = useState("");
-  const [filterParent, setFilterParent] = useState<string>("");
   const [showFollowUpsOnly, setShowFollowUpsOnly] = useState(false);
 
   // Form states for Home Visit
@@ -88,14 +87,6 @@ export const HomeVisitsTracker: React.FC = () => {
 
     if (filterArea) {
       filtered = filtered.filter((p) => p.area === filterArea);
-    }
-
-    if (filterParent) {
-      if (filterParent === "yes") {
-        filtered = filtered.filter((p) => p.isParent === true);
-      } else if (filterParent === "no") {
-        filtered = filtered.filter((p) => !p.isParent);
-      }
     }
 
     if (showFollowUpsOnly) {
@@ -249,15 +240,6 @@ export const HomeVisitsTracker: React.FC = () => {
                 {area}
               </option>
             ))}
-          </select>
-          <select
-            value={filterParent}
-            onChange={(e) => setFilterParent(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Parents</option>
-            <option value="yes">Parents Only</option>
-            <option value="no">Non-Parents</option>
           </select>
           <button
             className={`btn btn--sm ${showFollowUpsOnly ? "btn--primary" : ""}`}

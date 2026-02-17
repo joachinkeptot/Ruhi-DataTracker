@@ -9,10 +9,11 @@ import { Statistics } from "./Statistics";
 import { Tools } from "./Tools";
 import { ItemModal } from "./ItemModal";
 import { FamilyModal } from "./FamilyModal";
-import { ImportModal } from "./ImportModal";
 import { ConnectionModal } from "./ConnectionModal";
 import Analytics from "./Analytics";
+import { Forms } from "./Forms";
 import { HomeVisitsTracker } from "./HomeVisitsTracker";
+import { PublicForms } from "./PublicForms";
 import {
   FilterState,
   AdvancedFilterState,
@@ -67,7 +68,6 @@ const AppContent: React.FC = () => {
   );
   const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [isFamilyModalOpen, setIsFamilyModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [useAdvancedFilters, setUseAdvancedFilters] = useState(false);
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [connectionDraft, setConnectionDraft] = useState<{
@@ -475,7 +475,6 @@ const AppContent: React.FC = () => {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onAddItem={handleAddItem}
-            onImport={() => setIsImportModalOpen(true)}
             onAddConnection={() => handleAddConnection()}
           />
 
@@ -523,6 +522,10 @@ const AppContent: React.FC = () => {
           ) : viewMode === "homevisits" ? (
             <div className="panel__section">
               <HomeVisitsTracker />
+            </div>
+          ) : viewMode === "forms" ? (
+            <div className="panel__section">
+              <Forms />
             </div>
           ) : (
             <div className="panel__section">
@@ -1005,6 +1008,9 @@ const AppContent: React.FC = () => {
                       <span className="legend__item legend__item--adult">
                         Adult
                       </span>
+                      <span className="legend__item legend__item--parents">
+                        Parents
+                      </span>
                       <span className="legend__item legend__item--elder">
                         Elder
                       </span>
@@ -1064,11 +1070,6 @@ const AppContent: React.FC = () => {
         editingFamilyId={editingFamilyId}
       />
 
-      <ImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-      />
-
       <ConnectionModal
         isOpen={isConnectionModalOpen}
         onClose={() => setIsConnectionModalOpen(false)}
@@ -1080,6 +1081,14 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Check if this is a public form access
+  const urlParams = new URLSearchParams(window.location.search);
+  const isPublic = urlParams.get("public") === "true";
+
+  if (isPublic) {
+    return <PublicForms />;
+  }
+
   return (
     <AppProvider>
       <AppContent />
