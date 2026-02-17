@@ -4,17 +4,25 @@ import { HomeVisit, Conversation, VisitPurpose } from "./types";
 
 interface DetailPanelProps {
   onEdit?: (id: string) => void;
+  onEditActivity?: (id: string) => void;
+  onEditFamily?: (id: string) => void;
 }
 
-export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
+export const DetailPanel: React.FC<DetailPanelProps> = ({
+  onEdit,
+  onEditActivity,
+  onEditFamily,
+}) => {
   const {
     selected,
     people,
     activities,
     families,
     deletePerson,
+    deleteFamily,
     deleteActivity,
     updatePerson,
+    updateActivity,
   } = useApp();
 
   // Home Visit form state
@@ -32,6 +40,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
   const [convNotes, setConvNotes] = useState<string>("");
   const [convNextSteps, setConvNextSteps] = useState<string>("");
 
+  const [reflectionText, setReflectionText] = useState("");
   const handleAddHomeVisit = (personId: string) => {
     if (!hvDate) {
       alert("Date is required");
@@ -98,6 +107,73 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
     return <div className="detail">Select a node to see details.</div>;
   }
 
+  if (selected.type === "families") {
+    const family = families.find((f) => f.id === selected.id);
+    if (!family) {
+      return <div className="detail">Select a node to see details.</div>;
+    }
+
+    const members = people.filter(
+      (p) => p.familyId === family.id || p.familyId === family.familyName,
+    );
+
+    return (
+      <div className="detail">
+        <h4>{family.familyName}</h4>
+        <p>
+          <strong>Primary Area:</strong> {family.primaryArea || "-"}
+        </p>
+        <p>
+          <strong>Phone:</strong> {family.phone || "-"}
+        </p>
+        <p>
+          <strong>Email:</strong> {family.email || "-"}
+        </p>
+        <p>
+          <strong>Members:</strong> {members.length}
+        </p>
+        {family.notes && (
+          <p>
+            <strong>Notes:</strong> {family.notes}
+          </p>
+        )}
+        {members.length > 0 && (
+          <div style={{ marginTop: "0.75rem" }}>
+            <strong>Member List:</strong>
+            <div className="chip-row" style={{ marginTop: "0.5rem" }}>
+              {members.map((member) => (
+                <span key={member.id} className="chip chip--muted">
+                  {member.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+          <button
+            className="btn btn--primary"
+            style={{ flex: 1 }}
+            onClick={() => onEditFamily?.(family.id)}
+          >
+            Edit
+          </button>
+          <button
+            className="btn"
+            style={{ flex: 1, background: "#ef4444", color: "white" }}
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this family?")) {
+                deleteFamily(family.id);
+              }
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (selected.type === "people") {
     const person = people.find((p) => p.id === selected.id);
     if (!person) {
@@ -132,9 +208,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
           <strong>Age Group:</strong> {person.ageGroup}
         </p>
         <p>
-          <strong>Categories:</strong> {person.categories.join(", ") || "-"}
-        </p>
-        <p>
           <strong>Employment:</strong> {person.employmentStatus}
         </p>
         {person.schoolName && (
@@ -143,7 +216,15 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
           </p>
         )}
         <p>
-          <strong>Participation:</strong> {person.participationStatus}
+          <strong>Parent / Elder:</strong>{" "}
+          {person.isParent || person.isElder
+            ? [
+                person.isParent ? "Parent" : null,
+                person.isElder ? "Elder" : null,
+              ]
+                .filter(Boolean)
+                .join(", ")
+            : "-"}
         </p>
         <p>
           <strong>Connected Activities:</strong> {activityNames}
@@ -162,7 +243,11 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
           {person.jyTexts && person.jyTexts.length > 0
             ? person.jyTexts
                 .map((j) =>
-                  typeof j === "string" ? j : `Book ${j.bookNumber}`,
+                  j.bookName
+                    ? j.bookName
+                    : typeof j === "string"
+                      ? j
+                      : `Book ${j.bookNumber}`,
                 )
                 .join(", ")
             : "-"}
@@ -174,9 +259,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
                 .map((b) => b.bookName || `Book ${b.bookNumber}`)
                 .join(", ")
             : "-"}
-        </p>
-        <p>
-          <strong>Ruhi Level:</strong> {person.ruhiLevel}
         </p>
         <p>
           <strong>Notes:</strong> {person.notes || "-"}
@@ -483,27 +565,84 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({ onEdit }) => {
         </p>
         <p>
           <strong>{typeLabel[activity.type] || "Contact"}:</strong>{" "}
-          {activity.leader || "-"}
+          {activity.facilitator || activity.leader || "-"}
         </p>
         <p>
-          <strong>Notes:</strong> {activity.note || "-"}
+          <strong>Notes:</strong> {activity.notes || activity.note || "-"}
         </p>
-        <button
-          className="btn"
-          style={{
-            marginTop: "1rem",
-            width: "100%",
-            background: "#ef4444",
-            color: "white",
-          }}
-          onClick={() => {
-            if (confirm("Are you sure you want to delete this activity?")) {
-              deleteActivity(activity.id);
-            }
-          }}
-        >
-          Delete
-        </button>
+        <div style={{ marginTop: "1rem" }}>
+          <h5 style={{ marginBottom: "0.5rem" }}>Reflections Log</h5>
+          <textarea
+            placeholder="Add a reflection..."
+            value={reflectionText}
+            onChange={(e) => setReflectionText(e.target.value)}
+            rows={3}
+            style={{ width: "100%", marginBottom: "0.5rem" }}
+          />
+          <button
+            className="btn btn--sm"
+            onClick={() => {
+              const text = reflectionText.trim();
+              if (!text) return;
+              const next = [
+                ...(activity.reflections || []),
+                { date: new Date().toISOString(), text },
+              ];
+              updateActivity(activity.id, { reflections: next });
+              setReflectionText("");
+            }}
+          >
+            Add Reflection
+          </button>
+          {(activity.reflections || []).length === 0 ? (
+            <p className="hint" style={{ marginTop: "0.5rem" }}>
+              No reflections yet.
+            </p>
+          ) : (
+            <div style={{ marginTop: "0.75rem" }}>
+              {[...(activity.reflections || [])]
+                .slice(-5)
+                .reverse()
+                .map((entry, idx) => (
+                  <div
+                    key={`${entry.date}-${idx}`}
+                    style={{
+                      background: "#111827",
+                      padding: "0.5rem",
+                      borderRadius: "4px",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold", color: "#60a5fa" }}>
+                      {new Date(entry.date).toLocaleDateString()}
+                    </div>
+                    <div style={{ color: "#e5e7eb" }}>{entry.text}</div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+          <button
+            className="btn btn--primary"
+            style={{ flex: 1 }}
+            onClick={() => onEditActivity?.(activity.id)}
+          >
+            Edit
+          </button>
+          <button
+            className="btn"
+            style={{ flex: 1, background: "#ef4444", color: "white" }}
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this activity?")) {
+                deleteActivity(activity.id);
+              }
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
     );
   }

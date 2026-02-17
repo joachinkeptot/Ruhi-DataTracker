@@ -156,28 +156,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           onClick={() => handleSelectType("person")}
         >
           <div className="type-icon">👥</div>
-          <div className="type-title">Person & Family Intake</div>
-          <div className="type-desc">Import people and family information</div>
+          <div className="type-title">People Intake</div>
+          <div className="type-desc">Import people information</div>
         </button>
 
         <button
-          className={`type-button ${importType === "activity" ? "selected" : ""}`}
-          onClick={() => handleSelectType("activity")}
+          className={`type-button ${importType === "family" ? "selected" : ""}`}
+          onClick={() => handleSelectType("family")}
         >
-          <div className="type-icon">📅</div>
-          <div className="type-title">Activity Attendance</div>
-          <div className="type-desc">Log activity sessions and attendees</div>
-        </button>
-
-        <button
-          className={`type-button ${importType === "learning" ? "selected" : ""}`}
-          onClick={() => handleSelectType("learning")}
-        >
-          <div className="type-icon">📚</div>
-          <div className="type-title">Learning Progress</div>
-          <div className="type-desc">
-            Track book completions and Ruhi levels
-          </div>
+          <div className="type-icon">🏡</div>
+          <div className="type-title">Family Intake</div>
+          <div className="type-desc">Import family records</div>
         </button>
 
         <button
@@ -288,6 +277,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   <th key={header}>{header}</th>
                 ))}
               </tr>
+              {summary.updated.families > 0 && (
+                <div>{summary.updated.families} families</div>
+              )}
             </thead>
             <tbody>
               {previewRows.map((row, idx) => (

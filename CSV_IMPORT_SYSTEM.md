@@ -17,9 +17,9 @@ The CSV Import System is a comprehensive 6-step wizard that allows bulk importin
 
 ✅ **Four Import Types**
 
-1. **Person & Family Intake** - Import people and family records
-2. **Activity Attendance** - Log activity sessions and attendees
-3. **Learning Progress** - Track book completions and Ruhi levels
+1. **People Intake** - Import people records
+2. **Family Intake** - Import family records
+3. **Activity Attendance** - Log activity sessions and attendees
 4. **Home Visits & Conversations** - Record visits and interactions
 
 ✅ **Advanced Validation**
@@ -80,9 +80,9 @@ Click the **📥 Import** button in the header to open the CSV Import Wizard.
 
 Choose from:
 
-- **👥 Person & Family Intake** - Import people and families
+- **👥 People Intake** - Import people
+- **🏡 Family Intake** - Import families
 - **📅 Activity Attendance** - Log activity sessions
-- **📚 Learning Progress** - Track learning completions
 - **🏠 Home Visits & Conversations** - Record visits and interactions
 
 ### Step 2: Upload CSV File
@@ -133,43 +133,62 @@ No manual configuration needed for standard formats.
 
 ## CSV Format Specifications
 
-### Person & Family Intake
+Templates are available in `csv-templates/` for quick copy/paste into Google Sheets.
 
-**Filename**: `PersonIntake_YYYY-MM-DD.csv`
+### People Intake
+
+**Filename**: `PeopleIntake_YYYY-MM-DD.csv`
 
 **Required Columns**:
 
 - Person's Full Name (e.g., "Maria Garcia")
-- Family Name (creates family if not exists)
 - Area/Street (geographic area)
 - Age Group (child|JY|youth|adult|elder)
-- Your Name (data entry person)
 
 **Optional Columns**:
 
-- Timestamp, Phone, Email, School Name, Employment Status
-- Current Categories (JY|CC|Youth|Parents, pipe-delimited)
+- Family Name
+- Is Parent (Yes/No)
+- Is Elder (Yes/No)
+- Phone, Email, School Name
+- Employment Status (student|employed|unemployed|retired)
+- Participation Status (active|occasional|lapsed|new)
+- Cohorts (pipe-delimited)
 - Connected to Activities (pipe-delimited activity names)
 - Ruhi Level (0-12)
-- Home Visit Date (YYYY-MM-DD)
-- Conversation Topics, Follow-Up Needed, Follow-Up Date, Notes
+- CC Grades (pipe-delimited 1-5)
+- Notes
 
 **Import Logic**:
 
 1. Matches existing person by: Name + Area (case-insensitive)
 2. Creates new Family entity if family name doesn't exist
-3. Links person to family
+3. Links person to family when provided
 4. Parses pipe-delimited fields into arrays
 5. Matches activities by name (fuzzy match)
-6. Adds home visit record if date provided
-7. Adds conversation record if topics provided
 
 **Example CSV**:
 
 ```
-Person's Full Name,Family Name,Area/Street,Age Group,Your Name,Phone,Email,School Name,Current Categories,Ruhi Level
-Maria Garcia,Garcia Family,Northside,JY,John Smith,(555) 123-4567,maria@email.com,Lincoln High,JY|Youth,2
+Person's Full Name,Family Name,Area/Street,Age Group,Is Parent,Is Elder,Phone,Email,School Name,Employment Status,Participation Status,Cohorts,Connected to Activities,Ruhi Level,CC Grades,Notes
+Maria Garcia,Garcia Family,Northside,JY,No,No,(555) 123-4567,maria@email.com,Lincoln High,student,active,Northside|Teens,Northside JY Group|Study Circle 1,2,1|2,Notes here
 ```
+
+### Family Intake
+
+**Filename**: `FamilyIntake_YYYY-MM-DD.csv`
+
+**Required Columns**:
+
+- Family Name
+
+**Optional Columns**:
+
+- Primary Area
+- Phone, Email
+- Notes
+- Date Added (YYYY-MM-DD)
+- Last Contact (YYYY-MM-DD)
 
 ### Activity Attendance
 
@@ -177,7 +196,6 @@ Maria Garcia,Garcia Family,Northside,JY,John Smith,(555) 123-4567,maria@email.co
 
 **Required Columns**:
 
-- Your Name (reporter)
 - Activity Name (creates activity if not exists)
 - Activity Type (JY|CC|Study Circle|Devotional)
 - Date (YYYY-MM-DD)
@@ -200,40 +218,8 @@ Maria Garcia,Garcia Family,Northside,JY,John Smith,(555) 123-4567,maria@email.co
 **Example CSV**:
 
 ```
-Your Name,Activity Name,Activity Type,Date,Attendee Names,Highlights/Notes
-John Smith,Northside JY Group,JY,2026-02-05,"Maria Garcia, Ali Hassan, Emma Wilson",Great energy today!
-```
-
-### Learning Progress
-
-**Filename**: `LearningProgress_YYYY-MM-DD.csv`
-
-**Required Columns**:
-
-- Your Name (reporter)
-- Person's Name (exact match to existing person)
-- Learning Type (Ruhi Book|JY Text|CC Grade)
-- Book/Text/Grade Number (e.g., "3", "Book 3")
-- Date Completed (YYYY-MM-DD)
-
-**Optional Columns**:
-
-- Timestamp, Facilitator Name, Next Steps, Notes
-
-**Import Logic**:
-
-1. Fuzzy matches person by name
-2. Based on Learning Type:
-   - **Ruhi Book**: Updates studyCircleBooks and ruhiLevel
-   - **JY Text**: Adds to jyTextsCompleted array
-   - **CC Grade**: Tracks completion (extension to Person schema)
-3. Logs completion date for progress tracking
-
-**Example CSV**:
-
-```
-Your Name,Person's Name,Learning Type,Book/Text/Grade Number,Date Completed
-John Smith,Maria Garcia,JY Text,3,2026-02-08
+Activity Name,Activity Type,Date,Attendee Names,Highlights/Notes
+Northside JY Group,JY,2026-02-05,"Maria Garcia, Ali Hassan, Emma Wilson",Great energy today!
 ```
 
 ### Home Visits & Conversations
@@ -242,7 +228,6 @@ John Smith,Maria Garcia,JY Text,3,2026-02-08
 
 **Required Columns**:
 
-- Your Name(s) (comma-separated list of visitors)
 - Family/Person Visited (family or person name)
 - Area (geographic area)
 - Visit Date (YYYY-MM-DD)
@@ -251,6 +236,7 @@ John Smith,Maria Garcia,JY Text,3,2026-02-08
 
 **Optional Columns**:
 
+- Your Name(s) (comma-separated list of visitors)
 - Timestamp, Relationships Discovered, Interests Expressed, Next Steps, Follow-Up Date, Follow-Up Completed
 
 **Import Logic**:
@@ -290,14 +276,14 @@ Accepted formats (in order of preference):
 ### Data Types
 
 | Type          | Valid Values                              | Example    |
-| ------------- | ----------------------------------------- | ---------- |
+| ------------- | ----------------------------------------- | ---------- | --- | --- |
 | Age Group     | child, JY, youth, adult, elder            | JY         |
-| Category      | JY, CC, Youth, Parents                    | Youth      |
 | Employment    | student, employed, unemployed, retired    | student    |
-| Activity Type | JY, CC, StudyCircle, Devotional           | JY         |
-| Learning Type | Ruhi Book, JY Text, CC Grade              | JY Text    |
+| Participation | active, occasional, lapsed, new           | active     |
+| Activity Type | JY, CC, Study Circle, Devotional          | JY         |
 | Purpose       | Introduction, Follow-up, Social, Teaching | Follow-up  |
 | Boolean       | Yes, No, TRUE, FALSE, 1, 0                | Yes        |
+| CC Grades     | 1-5 (pipe-delimited)                      | 1          | 3   | 5   |
 | Number        | Positive integers                         | 42         |
 | Date          | ISO 8601 or common formats                | 2026-02-11 |
 
@@ -349,7 +335,7 @@ The system uses Levenshtein distance algorithm for intelligent matching:
 ## Limitations & Notes
 
 1. **Batch Size**: System handles unlimited rows, but performance best for < 10,000 rows
-2. **Case Sensitivity**: Enums (categories, types) are case-sensitive
+2. **Case Sensitivity**: Enums (age group, participation, activity type) are case-sensitive
 3. **Uniqueness**: Names are matched (not IDs) - ensure name consistency
 4. **Connections**: Unresolved activity names are silently skipped
 5. **Backup Size**: Backups stored in memory - large datasets may use significant RAM
@@ -419,14 +405,14 @@ src/
 - `createBackup()` - Create state backup
 - `restoreBackup()` - Restore from backup
 - `processPerson()` - Process person intake row
+- `processFamily()` - Process family intake row
 - `processActivity()` - Process activity attendance row
-- `processLearning()` - Process learning progress row
 - `processHomeVisit()` - Process home visit row
 
 ### Type Definitions
 
 ```typescript
-type ImportType = "person" | "activity" | "learning" | "homevisit";
+type ImportType = "person" | "family" | "activity" | "homevisit";
 
 interface CSVParseResult {
   importType: ImportType;
@@ -440,7 +426,7 @@ interface ImportSummary {
   successCount: number;
   errorCount: number;
   created: { people: number; families: number; activities: number };
-  updated: { people: number; activities: number };
+  updated: { people: number; families: number; activities: number };
   errors: Array<{ rowNumber: number; entityName: string; reason: string }>;
   backupId: string;
 }

@@ -22,7 +22,8 @@ interface AppContextType extends AppState {
   addPerson: (person: Omit<Person, "id">) => void;
   updatePerson: (id: string, person: Partial<Person>) => void;
   deletePerson: (id: string) => void;
-  addActivity: (activity: Omit<Activity, "id">) => void;
+  addActivity: (activity: Omit<Activity, "id">) => string;
+  updateActivity: (id: string, activity: Partial<Activity>) => void;
   deleteActivity: (id: string) => void;
   addFamily: (family: Omit<Family, "id">) => void;
   updateFamily: (id: string, family: Partial<Family>) => void;
@@ -57,6 +58,7 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [people, setPeople] = useState<Person[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
@@ -68,7 +70,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [groupPositions, setGroupPositions] = useState<Map<string, Position>>(
     new Map(),
   );
-  const [viewMode, setViewModeState] = useState<ViewMode>("areas");
+  const [viewMode, setViewModeState] = useState<ViewMode>("people");
   const [cohortViewMode, setCohortViewModeState] =
     useState<CohortViewMode>("categories");
   const [showConnections, setShowConnectionsState] = useState<boolean>(false);
@@ -83,11 +85,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setSavedQueries(savedData.savedQueries || []);
       setSelectedState(savedData.selected);
       setGroupPositions(new Map(Object.entries(savedData.groupPositions)));
+      setViewModeState(savedData.viewMode || "people");
+      setCohortViewModeState(savedData.cohortViewMode || "categories");
+      setShowConnectionsState(savedData.showConnections ?? false);
     }
+    setIsLoaded(true);
   }, []);
 
-  // Save data on changes
+  // Save data on changes (only after initial load)
   useEffect(() => {
+    if (!isLoaded) return;
+
     const state = {
       people,
       activities,
@@ -95,9 +103,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       savedQueries,
       selected,
       groupPositions: Object.fromEntries(groupPositions),
+      viewMode,
+      cohortViewMode,
+      showConnections,
     };
     saveToLocalStorage(state);
-  }, [people, activities, families, savedQueries, selected, groupPositions]);
+  }, [
+    isLoaded,
+    people,
+    activities,
+    families,
+    savedQueries,
+    selected,
+    groupPositions,
+    viewMode,
+    cohortViewMode,
+    showConnections,
+  ]);
 
   const addPerson = (person: Omit<Person, "id">) => {
     const newPerson: Person = { ...person, id: generateId() };
@@ -120,6 +142,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const addActivity = (activity: Omit<Activity, "id">) => {
     const newActivity: Activity = { ...activity, id: generateId() };
     setActivities((prev) => [...prev, newActivity]);
+    return newActivity.id;
+  };
+
+  const updateActivity = (id: string, updates: Partial<Activity>) => {
+    setActivities((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updates } : a)),
+    );
   };
 
   const deleteActivity = (id: string) => {
@@ -213,6 +242,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     updatePerson,
     deletePerson,
     addActivity,
+    updateActivity,
     deleteActivity,
     addFamily,
     updateFamily,

@@ -11,49 +11,46 @@
 
 ## CSV Column Names (Exact Match Required)
 
-### Person & Family Intake
+### People Intake
 
 ```
-Timestamp, Your Name, Person's Full Name, Family Name, Area/Street, Age Group
-Phone, Email, School Name, Employment Status, Current Categories
-Connected to Activities, Ruhi Level, Home Visit Date, Conversation Topics
-Follow-Up Needed, Follow-Up Date, Notes
+Person's Full Name, Family Name, Area/Street, Age Group, Is Parent, Is Elder
+Phone, Email, School Name, Employment Status, Participation Status
+Cohorts, Connected to Activities, Ruhi Level, CC Grades, Notes
+```
+
+### Family Intake
+
+```
+Family Name, Primary Area, Phone, Email, Notes, Date Added, Last Contact
 ```
 
 ### Activity Attendance
 
 ```
-Timestamp, Your Name, Activity Name, Activity Type, Date
+Activity Name, Activity Type, Date
 Facilitator Name, Attendee Names, Total Attendance, New Attendees
 Highlights/Notes, Materials Covered
-```
-
-### Learning Progress
-
-```
-Timestamp, Your Name, Person's Name, Learning Type
-Book/Text/Grade Number, Date Completed, Facilitator Name, Next Steps, Notes
 ```
 
 ### Home Visits & Conversations
 
 ```
-Timestamp, Your Name(s), Family/Person Visited, Area, Visit Date, Purpose
+Your Name(s), Family/Person Visited, Area, Visit Date, Purpose
 Conversation Topics, Relationships Discovered, Interests Expressed
 Next Steps, Follow-Up Date, Follow-Up Completed
 ```
 
 ## Valid Values (Case-Sensitive)
 
-| Field              | Valid Values                              |
-| ------------------ | ----------------------------------------- |
-| Age Group          | child, JY, youth, adult, elder            |
-| Current Categories | JY, CC, Youth, Parents                    |
-| Employment Status  | student, employed, unemployed, retired    |
-| Activity Type      | JY, CC, StudyCircle, Devotional           |
-| Learning Type      | Ruhi Book, JY Text, CC Grade              |
-| Purpose            | Introduction, Follow-up, Social, Teaching |
-| Follow-Up Needed   | Yes, No, Scheduled                        |
+| Field             | Valid Values                              |
+| ----------------- | ----------------------------------------- |
+| Age Group         | child, JY, youth, adult, elder            |
+| Employment Status | student, employed, unemployed, retired    |
+| Participation     | active, occasional, lapsed, new           |
+| Activity Type     | JY, CC, Study Circle, Devotional          |
+| Purpose           | Introduction, Follow-up, Social, Teaching |
+| Boolean           | Yes, No, TRUE, FALSE, 1, 0                |
 
 ## Date Format
 
@@ -63,8 +60,9 @@ Next Steps, Follow-Up Date, Follow-Up Completed
 
 **Pipe-delimited** (use `|` for multiple values):
 
-- Current Categories: `JY|Youth|Parents`
+- Cohorts: `Northside|Teens`
 - Connected to Activities: `Activity 1|Activity 2|Activity 3`
+- CC Grades: `1|3|5`
 
 **Comma-separated** (use `,` for lists):
 
@@ -97,9 +95,9 @@ If exact name not found, system shows similar matches:
 
 ### Updated
 
-- Existing Person records (adds connections, learning progress)
+- Existing Person records (adds connections, cohorts, CC grades)
 - Existing Activity records (updates facilitator, notes)
-- Existing Family records (links new people)
+- Existing Family records
 
 ## Export & Undo
 

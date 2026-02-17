@@ -7,6 +7,7 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onAddItem: () => void;
   onImport: () => void;
+  onAddConnection?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onAddItem,
   onImport,
+  onAddConnection,
 }) => {
   const {
     viewMode,
@@ -41,11 +43,11 @@ export const Header: React.FC<HeaderProps> = ({
     <div className="panel__section board__header">
       <div className="tabs" role="tablist">
         <button
-          className={`tab ${viewMode === "areas" ? "tab--active" : ""}`}
-          onClick={() => handleViewChange("areas")}
+          className={`tab ${viewMode === "people" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("people")}
           role="tab"
         >
-          Areas
+          People
         </button>
         <button
           className={`tab ${viewMode === "cohorts" ? "tab--active" : ""}`}
@@ -55,11 +57,25 @@ export const Header: React.FC<HeaderProps> = ({
           Cohorts
         </button>
         <button
+          className={`tab ${viewMode === "families" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("families")}
+          role="tab"
+        >
+          Families
+        </button>
+        <button
           className={`tab ${viewMode === "activities" ? "tab--active" : ""}`}
           onClick={() => handleViewChange("activities")}
           role="tab"
         >
           Activities
+        </button>
+        <button
+          className={`tab ${viewMode === "homevisits" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("homevisits")}
+          role="tab"
+        >
+          Home Visits
         </button>
         <button
           className={`tab ${viewMode === "analytics" ? "tab--active" : ""}`}
@@ -75,6 +91,9 @@ export const Header: React.FC<HeaderProps> = ({
             <button className="btn btn--sm" onClick={toggleCohortView}>
               View:{" "}
               {cohortViewMode === "categories" ? "Categories" : "Families"}
+            </button>
+            <button className="btn btn--sm" onClick={onAddConnection}>
+              + Add Connection
             </button>
             <button
               className={`btn btn--sm ${showConnections ? "btn--active" : ""}`}

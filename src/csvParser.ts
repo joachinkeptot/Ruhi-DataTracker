@@ -6,122 +6,39 @@ import {
   ImportType,
   AgeGroup,
   EmploymentStatus,
-  Category,
-  ActivityType,
+  ParticipationStatus,
 } from "./types";
-
-// Define expected columns for each import type
-// Used by detectImportType and validateHeaders
-// @ts-ignore - Used for maintenance and type checking
-const EXPECTED_COLUMNS: Record<ImportType, string[]> = {
-  person: [
-    "Timestamp",
-    "Your Name",
-    "Person's Full Name",
-    "Family Name",
-    "Area/Street",
-    "Age Group",
-    "Phone",
-    "Email",
-    "School Name",
-    "Employment Status",
-    "Current Categories",
-    "Connected to Activities",
-    "Ruhi Level",
-    "Home Visit Date",
-    "Conversation Topics",
-    "Follow-Up Needed",
-    "Follow-Up Date",
-    "Notes",
-  ],
-  activity: [
-    "Timestamp",
-    "Your Name",
-    "Activity Name",
-    "Activity Type",
-    "Date",
-    "Facilitator Name",
-    "Attendee Names",
-    "Total Attendance",
-    "New Attendees",
-    "Highlights/Notes",
-    "Materials Covered",
-  ],
-  learning: [
-    "Timestamp",
-    "Your Name",
-    "Person's Name",
-    "Learning Type",
-    "Book/Text/Grade Number",
-    "Date Completed",
-    "Facilitator Name",
-    "Next Steps",
-    "Notes",
-  ],
-  homevisit: [
-    "Timestamp",
-    "Your Name(s)",
-    "Family/Person Visited",
-    "Area",
-    "Visit Date",
-    "Purpose",
-    "Conversation Topics",
-    "Relationships Discovered",
-    "Interests Expressed",
-    "Next Steps",
-    "Follow-Up Date",
-    "Follow-Up Completed",
-  ],
-};
 
 // Mapping from CSV columns to data fields
 const COLUMN_MAPPING: Record<ImportType, Record<string, string>> = {
   person: {
-    Timestamp: "timestamp",
-    "Your Name": "yourName",
     "Person's Full Name": "personName",
     "Family Name": "familyName",
     "Area/Street": "area",
     "Age Group": "ageGroup",
+    "Is Parent": "isParent",
+    "Is Elder": "isElder",
     Phone: "phone",
     Email: "email",
     "School Name": "schoolName",
     "Employment Status": "employmentStatus",
-    "Current Categories": "categories",
+    "Participation Status": "participationStatus",
+    Cohorts: "cohorts",
     "Connected to Activities": "connectedActivities",
     "Ruhi Level": "ruhiLevel",
-    "Home Visit Date": "homeVisitDate",
-    "Conversation Topics": "conversationTopics",
-    "Follow-Up Needed": "followUpNeeded",
-    "Follow-Up Date": "followUpDate",
+    "CC Grades": "ccGrades",
     Notes: "notes",
   },
-  activity: {
-    Timestamp: "timestamp",
-    "Your Name": "yourName",
-    "Activity Name": "activityName",
-    "Activity Type": "activityType",
-    Date: "date",
-    "Facilitator Name": "facilitator",
-    "Attendee Names": "attendeeNames",
-    "Total Attendance": "totalAttendance",
-    "New Attendees": "newAttendees",
-    "Highlights/Notes": "highlights",
-    "Materials Covered": "materialsCovered",
-  },
-  learning: {
-    Timestamp: "timestamp",
-    "Your Name": "yourName",
-    "Person's Name": "personName",
-    "Learning Type": "learningType",
-    "Book/Text/Grade Number": "bookNumber",
-    "Date Completed": "dateCompleted",
-    "Facilitator Name": "facilitator",
-    "Next Steps": "nextSteps",
+  family: {
+    "Family Name": "familyName",
+    "Primary Area": "primaryArea",
+    Phone: "phone",
+    Email: "email",
     Notes: "notes",
+    "Date Added": "dateAdded",
+    "Last Contact": "lastContact",
   },
   homevisit: {
-    Timestamp: "timestamp",
     "Your Name(s)": "visitors",
     "Family/Person Visited": "familyOrPersonName",
     Area: "area",
@@ -138,34 +55,14 @@ const COLUMN_MAPPING: Record<ImportType, Record<string, string>> = {
 
 // Required columns for each type
 const REQUIRED_COLUMNS: Record<ImportType, string[]> = {
-  person: [
-    "Person's Full Name",
-    "Family Name",
-    "Area/Street",
-    "Age Group",
-    "Your Name",
-  ],
-  activity: [
-    "Activity Name",
-    "Activity Type",
-    "Date",
-    "Attendee Names",
-    "Your Name",
-  ],
-  learning: [
-    "Person's Name",
-    "Learning Type",
-    "Book/Text/Grade Number",
-    "Date Completed",
-    "Your Name",
-  ],
+  person: ["Person's Full Name", "Area/Street", "Age Group"],
+  family: ["Family Name"],
   homevisit: [
     "Family/Person Visited",
     "Area",
     "Visit Date",
     "Purpose",
     "Conversation Topics",
-    "Your Name(s)",
   ],
 };
 
@@ -176,17 +73,13 @@ const VALID_EMPLOYMENT_STATUSES: EmploymentStatus[] = [
   "unemployed",
   "retired",
 ];
-const VALID_CATEGORIES: Category[] = ["JY", "CC", "Youth", "Parents"];
-const VALID_ACTIVITY_TYPES: ActivityType[] = [
-  "JY",
-  "CC",
-  "Study Circle",
-  "Devotional",
+const VALID_PARTICIPATION_STATUSES: ParticipationStatus[] = [
+  "active",
+  "occasional",
+  "lapsed",
+  "new",
 ];
-const VALID_LEARNING_TYPES = ["Ruhi Book", "JY Text", "CC Grade"];
 const VALID_PURPOSES = ["Introduction", "Follow-up", "Social", "Teaching"];
-// @ts-ignore - Used for validation and maintenance
-const VALID_BOOLEANS = ["Yes", "No", "TRUE", "FALSE", "1", "0"];
 
 export class CSVParser {
   /**
@@ -224,23 +117,17 @@ export class CSVParser {
     // Check for distinctive columns
     if (
       headerSet.has("Person's Full Name") &&
-      headerSet.has("Family Name") &&
-      headerSet.has("Current Categories")
+      headerSet.has("Area/Street") &&
+      headerSet.has("Age Group")
     ) {
       return "person";
     }
     if (
-      headerSet.has("Activity Name") &&
-      headerSet.has("Attendee Names") &&
-      headerSet.has("Activity Type")
+      headerSet.has("Family Name") &&
+      headerSet.has("Primary Area") &&
+      !headerSet.has("Person's Full Name")
     ) {
-      return "activity";
-    }
-    if (
-      headerSet.has("Learning Type") &&
-      headerSet.has("Book/Text/Grade Number")
-    ) {
-      return "learning";
+      return "family";
     }
     if (
       headerSet.has("Family/Person Visited") &&
@@ -339,6 +226,31 @@ export class CSVParser {
           }
         }
 
+        if (column === "Participation Status" && value) {
+          if (!VALID_PARTICIPATION_STATUSES.includes(value)) {
+            errors.push({
+              rowNumber,
+              columnName: column,
+              value,
+              severity: "error",
+              message: `Invalid participation status "${value}". Must be one of: ${VALID_PARTICIPATION_STATUSES.join(", ")}`,
+            });
+          }
+        }
+
+        if ((column === "Is Parent" || column === "Is Elder") && value) {
+          const normalized = value.toString().trim().toLowerCase();
+          if (!["yes", "no", "true", "false", "1", "0"].includes(normalized)) {
+            errors.push({
+              rowNumber,
+              columnName: column,
+              value,
+              severity: "error",
+              message: `Invalid boolean "${value}". Must be Yes/No or TRUE/FALSE`,
+            });
+          }
+        }
+
         if (column === "Ruhi Level" && value) {
           const num = parseInt(value);
           if (isNaN(num) || num < 0 || num > 12) {
@@ -352,43 +264,22 @@ export class CSVParser {
           }
         }
 
-        if (column === "Current Categories" && value) {
-          const cats = value.split("|").map((c: string) => c.trim());
-          for (const cat of cats) {
-            if (!VALID_CATEGORIES.includes(cat)) {
+        if (column === "CC Grades" && value) {
+          const grades = value
+            .split("|")
+            .map((g: string) => g.trim())
+            .filter((g: string) => g.length > 0);
+          for (const grade of grades) {
+            const num = parseInt(grade);
+            if (isNaN(num) || num < 1 || num > 5) {
               errors.push({
                 rowNumber,
                 columnName: column,
-                value: cat,
+                value: grade,
                 severity: "error",
-                message: `Invalid category "${cat}". Must be one of: ${VALID_CATEGORIES.join(", ")}`,
+                message: `Invalid CC grade "${grade}". Must be a number between 1 and 5`,
               });
             }
-          }
-        }
-
-        // Validate date formats
-        if (column === "Home Visit Date" && value) {
-          if (!this.isValidDate(value)) {
-            errors.push({
-              rowNumber,
-              columnName: column,
-              value,
-              severity: "error",
-              message: `Invalid date format "${value}". Use YYYY-MM-DD`,
-            });
-          }
-        }
-
-        if (column === "Follow-Up Date" && value) {
-          if (!this.isValidDate(value)) {
-            errors.push({
-              rowNumber,
-              columnName: column,
-              value,
-              severity: "error",
-              message: `Invalid date format "${value}". Use YYYY-MM-DD`,
-            });
           }
         }
 
@@ -406,20 +297,8 @@ export class CSVParser {
         }
       }
 
-      if (importType === "activity") {
-        if (column === "Activity Type" && value) {
-          if (!VALID_ACTIVITY_TYPES.includes(value)) {
-            errors.push({
-              rowNumber,
-              columnName: column,
-              value,
-              severity: "error",
-              message: `Invalid activity type "${value}". Must be one of: ${VALID_ACTIVITY_TYPES.join(", ")}`,
-            });
-          }
-        }
-
-        if (column === "Date" && value) {
+      if (importType === "family") {
+        if (column === "Date Added" && value) {
           if (!this.isValidDate(value)) {
             errors.push({
               rowNumber,
@@ -431,34 +310,7 @@ export class CSVParser {
           }
         }
 
-        if (column === "Total Attendance" && value) {
-          const num = parseInt(value);
-          if (isNaN(num) || num < 0) {
-            errors.push({
-              rowNumber,
-              columnName: column,
-              value,
-              severity: "error",
-              message: `Invalid attendance number "${value}". Must be a positive number`,
-            });
-          }
-        }
-      }
-
-      if (importType === "learning") {
-        if (column === "Learning Type" && value) {
-          if (!VALID_LEARNING_TYPES.includes(value)) {
-            errors.push({
-              rowNumber,
-              columnName: column,
-              value,
-              severity: "error",
-              message: `Invalid learning type "${value}". Must be one of: ${VALID_LEARNING_TYPES.join(", ")}`,
-            });
-          }
-        }
-
-        if (column === "Date Completed" && value) {
+        if (column === "Last Contact" && value) {
           if (!this.isValidDate(value)) {
             errors.push({
               rowNumber,
@@ -466,6 +318,18 @@ export class CSVParser {
               value,
               severity: "error",
               message: `Invalid date format "${value}". Use YYYY-MM-DD`,
+            });
+          }
+        }
+
+        if (column === "Email" && value) {
+          if (!this.isValidEmail(value)) {
+            errors.push({
+              rowNumber,
+              columnName: column,
+              value,
+              severity: "warning",
+              message: `Email "${value}" appears to be invalid`,
             });
           }
         }

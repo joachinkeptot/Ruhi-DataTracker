@@ -36,7 +36,7 @@ export const Statistics: React.FC = () => {
     alert(`Family "${familyName.trim()}" added successfully!`);
   };
 
-  if (viewMode === "areas") {
+  if (viewMode === "people") {
     const areas = getAreaList(people);
     const areaStats: Record<string, number> = {};
     areas.forEach((area) => {
@@ -82,7 +82,7 @@ export const Statistics: React.FC = () => {
 
       families.forEach((family) => {
         familyCounts[family.familyName] = people.filter(
-          (p) => p.familyId === family.id,
+          (p) => p.familyId === family.id || p.familyId === family.familyName,
         ).length;
       });
 
@@ -126,13 +126,12 @@ export const Statistics: React.FC = () => {
         </div>
       );
     } else {
-      const counts = { JY: 0, CC: 0, Youth: 0, Parents: 0 };
+      const ageGroupCounts: Record<string, number> = {};
       const ruhiCounts: Record<number, number> = {};
 
       people.forEach((person) => {
-        person.categories.forEach((cat) => {
-          if (cat in counts) counts[cat as keyof typeof counts]++;
-        });
+        const age = person.ageGroup;
+        ageGroupCounts[age] = (ageGroupCounts[age] || 0) + 1;
 
         const level = person.ruhiLevel;
         ruhiCounts[level] = (ruhiCounts[level] || 0) + 1;
@@ -146,11 +145,12 @@ export const Statistics: React.FC = () => {
         <div className="stats-breakdown">
           <h4>Statistics</h4>
           <div>
-            <h5>Cohorts</h5>
-            <p>JY: {counts.JY}</p>
-            <p>CC: {counts.CC}</p>
-            <p>Youth: {counts.Youth}</p>
-            <p>Parents: {counts.Parents}</p>
+            <h5>Age Groups</h5>
+            {Object.entries(ageGroupCounts).map(([age, count]) => (
+              <p key={age}>
+                {age.charAt(0).toUpperCase() + age.slice(1)}: {count}
+              </p>
+            ))}
             <h5 style={{ marginTop: "1rem" }}>Ruhi Levels</h5>
             {sortedRuhiLevels.map((level) => (
               <p key={level}>
@@ -161,6 +161,48 @@ export const Statistics: React.FC = () => {
         </div>
       );
     }
+  }
+
+  if (viewMode === "families") {
+    const familyCounts: Record<string, number> = {};
+    families.forEach((family) => {
+      familyCounts[family.familyName] = people.filter(
+        (p) => p.familyId === family.id || p.familyId === family.familyName,
+      ).length;
+    });
+
+    const sortedFamilies = Object.keys(familyCounts).sort();
+
+    return (
+      <div className="stats-breakdown">
+        <h4>Statistics</h4>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "0.5rem",
+          }}
+        >
+          <h5 style={{ margin: 0 }}>Families</h5>
+          <button
+            className="btn btn--sm btn--primary"
+            onClick={handleAddFamily}
+          >
+            + Family
+          </button>
+        </div>
+        {families.length === 0 ? (
+          <p>No families defined</p>
+        ) : (
+          sortedFamilies.map((name) => (
+            <p key={name}>
+              {name}: {familyCounts[name]} members
+            </p>
+          ))
+        )}
+      </div>
+    );
   }
 
   if (viewMode === "activities") {

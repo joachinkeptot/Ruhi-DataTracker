@@ -1449,7 +1449,7 @@ async function startAutoSync() {
     }
   }, 3000);
 
-  console.log("✅ Auto-sync started (every 3s)");
+  // Auto-sync started
 }
 
 if (!loadState()) {

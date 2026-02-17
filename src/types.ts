@@ -19,16 +19,6 @@ export type Category = "JY" | "CC" | "Youth" | "Parents";
 
 export type ActivityType = "JY" | "CC" | "Study Circle" | "Devotional";
 
-export type ConnectionType =
-  | "family"
-  | "school"
-  | "work"
-  | "neighborhood"
-  | "activity"
-  | "friendship";
-
-export type ConnectionStrength = 1 | 2 | 3; // 1=weak, 2=medium, 3=strong
-
 export type FollowUpStatus = "Yes" | "No" | "Scheduled";
 
 export type VisitPurpose = "Introduction" | "Follow-up" | "Social" | "Teaching";
@@ -45,7 +35,8 @@ export interface Position {
 
 // Learning Completion Records
 export interface JYTextCompletion {
-  bookNumber: number; // 1-7
+  bookNumber?: number; // Legacy: 1-7 (deprecated, use bookName)
+  bookName: string; // Name of the JY text (e.g., "Breezes of Confirmation")
   dateCompleted: string; // ISO 8601 date
   animator?: string; // Name of animator
   notes?: string;
@@ -60,7 +51,7 @@ export interface RuhiBookCompletion {
 }
 
 export interface CCGradeCompletion {
-  gradeNumber: number; // 1-6
+  gradeNumber: number; // 1-5
   lessonsCompleted: number; // How many lessons in this grade
   dateCompleted?: string; // When grade was finished (if completed)
   teacher?: string; // Name of teacher
@@ -92,9 +83,7 @@ export interface Conversation {
 // Person connection/relationship
 export interface PersonConnection {
   personId: string; // ID of the connected person
-  connectionType: ConnectionType; // How they know each other
-  strength: ConnectionStrength; // 1=weak, 2=medium, 3=strong
-  description?: string; // Details: "Friend from school" etc.
+  description?: string; // Optional details
   dateAdded: string; // When connection was recorded
 }
 
@@ -121,14 +110,14 @@ export interface Person {
 
   // Demographics
   ageGroup: AgeGroup; // child, JY, youth, adult, elder
+  isParent?: boolean;
+  isElder?: boolean;
   phone?: string;
   email?: string;
   schoolName?: string; // If student
   employmentStatus?: EmploymentStatus;
 
-  // Categories & Participation
-  categories: Category[]; // Can have multiple: ['JY', 'Youth']
-  participationStatus: ParticipationStatus; // active, occasional, lapsed, new
+  // Activity Connections
   connectedActivities: string[]; // Array of Activity IDs
 
   // Learning Progress
@@ -144,6 +133,9 @@ export interface Person {
 
   // Relationships
   connections: PersonConnection[]; // Array of relationships to other people
+
+  // Cohorts
+  cohorts?: string[]; // User-defined cohort labels
 
   // Metadata
   notes?: string; // General notes
@@ -173,12 +165,20 @@ export interface Activity {
   note?: string; // Alternative name for notes (for backward compatibility)
   materials?: string; // What's being studied
 
+  // Reflections log
+  reflections?: ActivityReflection[];
+
   // Metadata
   dateCreated: string; // ISO 8601 timestamp
   lastModified: string;
 
   // Canvas Position
   position?: Position;
+}
+
+export interface ActivityReflection {
+  date: string; // ISO 8601 date
+  text: string;
 }
 
 // Attendance Log (for detailed tracking)
@@ -198,13 +198,19 @@ export interface AttendanceRecord {
 // UI & APPLICATION STATE
 // ============================================================================
 
-export type ViewMode = "areas" | "cohorts" | "activities" | "analytics";
+export type ViewMode =
+  | "people"
+  | "cohorts"
+  | "families"
+  | "activities"
+  | "homevisits"
+  | "analytics";
 
 export type CohortViewMode = "categories" | "families" | "connections";
 
 // Selected item state
 export interface SelectedItem {
-  type: "people" | "activities";
+  type: "people" | "families" | "activities";
   id: string | null;
 }
 
@@ -249,7 +255,6 @@ export interface FilterState {
 export interface AdvancedFilterState {
   // Basic filters
   areas: string[];
-  categories: Category[];
   ageGroups: AgeGroup[];
 
   // Family filters
@@ -262,7 +267,6 @@ export interface AdvancedFilterState {
   // Learning filters
   ruhiMin: number | null;
   ruhiMax: number | null;
-  jyTexts: string[]; // e.g., ["Book 1", "Book 2"]
 
   // Engagement filters
   homeVisitDays: number | null; // last X days
@@ -271,9 +275,6 @@ export interface AdvancedFilterState {
   // Employment filters
   employmentStatuses: EmploymentStatus[];
   inSchool: boolean | null; // null = no filter
-
-  // Participation filters
-  participationStatuses: ParticipationStatus[];
 }
 
 // Saved query
@@ -295,13 +296,16 @@ export interface SerializableState {
   canvasPositions?: CanvasPositions;
   groupPositions: { [key: string]: Position };
   savedQueries: SavedQuery[];
+  viewMode?: ViewMode;
+  cohortViewMode?: CohortViewMode;
+  showConnections?: boolean;
 }
 
 // ============================================================================
 // CSV IMPORT TYPES (For import system)
 // ============================================================================
 
-export type ImportType = "person" | "activity" | "learning" | "homevisit";
+export type ImportType = "person" | "family" | "homevisit";
 
 export interface ValidationError {
   rowNumber: number;
@@ -389,6 +393,7 @@ export interface ImportSummary {
   };
   updated: {
     people: number;
+    families: number;
     activities: number;
   };
   errors: Array<{
@@ -418,44 +423,29 @@ export interface PersonIntakeRow {
   familyName?: string;
   area: string;
   ageGroup: AgeGroup;
+  isParent?: boolean;
+  isElder?: boolean;
   phone?: string;
   email?: string;
   schoolName?: string;
   employmentStatus?: EmploymentStatus;
-  categories?: Category[];
+  participationStatus?: ParticipationStatus;
+  cohorts?: string[];
   connectedActivities?: string[];
   ruhiLevel?: number;
-  homeVisitDate?: string;
-  conversationTopics?: string;
-  followUpNeeded?: FollowUpStatus;
-  followUpDate?: string;
+  ccGrades?: number[];
   notes?: string;
 }
 
-export interface ActivityAttendanceRow {
+export interface FamilyIntakeRow {
   timestamp?: string;
-  yourName: string;
-  activityName: string;
-  activityType: ActivityType;
-  date: string;
-  facilitator?: string;
-  attendeeNames: string[];
-  totalAttendance: number;
-  newAttendees?: string[];
-  highlights?: string;
-  materialsCovered?: string;
-}
-
-export interface LearningProgressRow {
-  timestamp?: string;
-  yourName: string;
-  personName: string;
-  learningType: "Ruhi Book" | "JY Text" | "CC Grade";
-  bookNumber: string;
-  dateCompleted: string;
-  facilitator?: string;
-  nextSteps?: string;
+  familyName: string;
+  primaryArea?: string;
+  phone?: string;
+  email?: string;
   notes?: string;
+  dateAdded?: string;
+  lastContact?: string;
 }
 
 export interface HomeVisitRow {
@@ -484,6 +474,7 @@ export interface ImportResult {
     };
     updated: {
       people: number;
+      families: number;
       activities: number;
     };
     errors: Array<{

@@ -3,21 +3,23 @@ import { AppProvider, useApp } from "./AppContext";
 import { Header } from "./Header";
 import { FilterBar } from "./FilterBar";
 import { AdvancedFilters } from "./AdvancedFilters";
-import { Canvas } from "./Canvas";
+import { NetworkVisualization } from "./NetworkVisualization";
 import { DetailPanel } from "./DetailPanel";
 import { Statistics } from "./Statistics";
 import { Tools } from "./Tools";
 import { ItemModal } from "./ItemModal";
 import { FamilyModal } from "./FamilyModal";
 import { ImportModal } from "./ImportModal";
+import { ConnectionModal } from "./ConnectionModal";
 import Analytics from "./Analytics";
+import { HomeVisitsTracker } from "./HomeVisitsTracker";
 import {
   FilterState,
   AdvancedFilterState,
   Person,
   Activity,
+  Family,
   ActivityType,
-  Category,
   EmploymentStatus,
 } from "./types";
 import { exportToCSV } from "./utils";
@@ -31,6 +33,9 @@ const AppContent: React.FC = () => {
     viewMode,
     savedQueries,
     addSavedQuery,
+    setSelected,
+    showConnections,
+    updatePerson,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,30 +49,49 @@ const AppContent: React.FC = () => {
   });
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterState>({
     areas: [],
-    categories: [],
     ageGroups: [],
     familyIds: [],
     hasConnections: null,
     connectedActivityTypes: [],
     ruhiMin: null,
     ruhiMax: null,
-    jyTexts: [],
     homeVisitDays: null,
     conversationDays: null,
     employmentStatuses: [],
     inSchool: null,
-    participationStatuses: [],
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(
+    null,
+  );
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [isFamilyModalOpen, setIsFamilyModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [useAdvancedFilters, setUseAdvancedFilters] = useState(false);
+  const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const [connectionDraft, setConnectionDraft] = useState<{
+    personA?: Person;
+    personB?: Person;
+  }>({});
+  const [newCohortName, setNewCohortName] = useState("");
+  const [newCohortPeople, setNewCohortPeople] = useState<string[]>([]);
+
+  const cohortColors = [
+    "#60a5fa",
+    "#f472b6",
+    "#a78bfa",
+    "#34d399",
+    "#f59e0b",
+    "#38bdf8",
+  ];
 
   // Get active items based on view mode
   const activeItems = useMemo(() => {
-    return viewMode === "activities" ? activities : people;
-  }, [viewMode, people, activities]);
+    if (viewMode === "activities") return activities;
+    if (viewMode === "families") return families;
+    return people;
+  }, [viewMode, people, families, activities]);
 
   // Apply advanced filters with AND logic
   const filteredPeople = useMemo(() => {
@@ -76,13 +100,6 @@ const AppContent: React.FC = () => {
     // Areas filter
     if (advancedFilters.areas.length > 0) {
       filtered = filtered.filter((p) => advancedFilters.areas.includes(p.area));
-    }
-
-    // Categories filter
-    if (advancedFilters.categories.length > 0) {
-      filtered = filtered.filter((p) =>
-        advancedFilters.categories.some((cat) => p.categories.includes(cat)),
-      );
     }
 
     // Age groups filter
@@ -135,22 +152,6 @@ const AppContent: React.FC = () => {
       );
     }
 
-    // JY texts filter
-    if (advancedFilters.jyTexts.length > 0) {
-      filtered = filtered.filter((p) =>
-        advancedFilters.jyTexts.every((text) =>
-          (p.jyTexts || []).some((jy) => {
-            // Handle both string format and object format
-            if (typeof jy === "string") {
-              return jy === text;
-            }
-            // If it's an object, check by book number or name
-            return jy.bookNumber === parseInt(text) || text.includes("Book");
-          }),
-        ),
-      );
-    }
-
     // Home visit engagement filter
     if (advancedFilters.homeVisitDays !== null) {
       const cutoffDate = new Date();
@@ -193,35 +194,35 @@ const AppContent: React.FC = () => {
       );
     }
 
-    // Participation status filter
-    if (advancedFilters.participationStatuses.length > 0) {
-      filtered = filtered.filter((p) =>
-        advancedFilters.participationStatuses.includes(p.participationStatus),
-      );
-    }
-
     return filtered;
   }, [people, activities, advancedFilters]);
 
   // Apply basic filters and search (legacy support)
   const filteredItems = useMemo(() => {
-    let items: (Person | Activity)[] = activeItems;
+    let items: (Person | Activity | Family)[] = activeItems as (
+      | Person
+      | Activity
+      | Family
+    )[];
 
     // Text search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       items = items.filter((item) => {
-        const name = item.name.toLowerCase();
+        const name = (
+          "familyName" in item ? item.familyName : item.name
+        ).toLowerCase();
 
         if ("ageGroup" in item) {
           const person = item as Person;
           const notes = (person.notes || "").toLowerCase();
           const area = person.area.toLowerCase();
-          const categories = person.categories.join(" ").toLowerCase();
           const jyTexts = item.jyTexts
             ? item.jyTexts
                 .map((j) =>
-                  typeof j === "string" ? j : `Book ${j.bookNumber}`,
+                  typeof j === "string"
+                    ? j
+                    : j.bookName || `Book ${j.bookNumber}`,
                 )
                 .join(" ")
                 .toLowerCase()
@@ -229,16 +230,15 @@ const AppContent: React.FC = () => {
           return (
             name.includes(query) ||
             area.includes(query) ||
-            categories.includes(query) ||
             jyTexts.includes(query) ||
             notes.includes(query)
           );
-        } else {
+        } else if ("type" in item) {
           const activity = item as Activity;
           const type = activity.type.toLowerCase();
           const leader = (
-            activity.leader ||
             activity.facilitator ||
+            activity.leader ||
             ""
           ).toLowerCase();
           const activityNotes = (activity.notes || "").toLowerCase();
@@ -248,43 +248,47 @@ const AppContent: React.FC = () => {
             leader.includes(query) ||
             activityNotes.includes(query)
           );
+        } else {
+          const family = item as Family;
+          const area = (family.primaryArea || "").toLowerCase();
+          const notes = (family.notes || "").toLowerCase();
+          const phone = (family.phone || "").toLowerCase();
+          const email = (family.email || "").toLowerCase();
+          return (
+            name.includes(query) ||
+            area.includes(query) ||
+            notes.includes(query) ||
+            phone.includes(query) ||
+            email.includes(query)
+          );
         }
       });
     }
 
     // Structured filters
-    if (viewMode !== "activities") {
+    if (viewMode !== "activities" && viewMode !== "families") {
       items = items.filter((item) => {
         if (!("ageGroup" in item)) return true;
         const person = item as Person;
 
         if (filters.area && person.area !== filters.area) return false;
-        if (
-          filters.category &&
-          !person.categories.includes(filters.category as Category)
-        )
+        if (filters.category && person.ageGroup !== filters.category)
           return false;
-        if (filters.ruhiMin !== null && person.ruhiLevel < filters.ruhiMin)
-          return false;
-        if (filters.ruhiMax !== null && person.ruhiLevel > filters.ruhiMax)
-          return false;
-        if (
-          filters.jyText &&
-          !(person.jyTexts || []).some((jy) => {
-            if (typeof jy === "string") return jy === filters.jyText;
-            return false;
-          })
-        )
-          return false;
-
         return true;
       });
-    } else {
+    } else if (viewMode === "activities") {
       items = items.filter((item) => {
         if ("ageGroup" in item) return true;
         const activity = item as Activity;
         if (filters.activityType && activity.type !== filters.activityType)
           return false;
+        return true;
+      });
+    } else {
+      items = items.filter((item) => {
+        if ("ageGroup" in item || "type" in item) return true;
+        const family = item as Family;
+        if (filters.area && family.primaryArea !== filters.area) return false;
         return true;
       });
     }
@@ -294,16 +298,75 @@ const AppContent: React.FC = () => {
 
   const handleAddItem = () => {
     setEditingPersonId(null);
+    setEditingActivityId(null);
     setIsModalOpen(true);
   };
 
   const handleEditPerson = (id: string) => {
     setEditingPersonId(id);
+    setEditingActivityId(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditActivity = (id: string) => {
+    setEditingActivityId(id);
+    setEditingPersonId(null);
     setIsModalOpen(true);
   };
 
   const handleAddFamily = () => {
+    setEditingFamilyId(null);
     setIsFamilyModalOpen(true);
+  };
+
+  const handleEditFamily = (id: string) => {
+    setEditingFamilyId(id);
+    setIsFamilyModalOpen(true);
+  };
+
+  const handleAddConnection = (personA?: Person, personB?: Person) => {
+    setConnectionDraft({ personA, personB });
+    setIsConnectionModalOpen(true);
+  };
+
+  const handleCreateCohort = () => {
+    const name = newCohortName.trim();
+    if (!name) return;
+    if (newCohortPeople.length === 0) {
+      alert("Select at least one person for this cohort");
+      return;
+    }
+    newCohortPeople.forEach((personId) => {
+      const person = people.find((p) => p.id === personId);
+      if (!person) return;
+      const nextCohorts = person.cohorts || [];
+      if (!nextCohorts.includes(name)) {
+        updatePerson(personId, { cohorts: [...nextCohorts, name] });
+      }
+    });
+    setNewCohortName("");
+    setNewCohortPeople([]);
+  };
+
+  const handleRenameCohort = (cohort: string) => {
+    const nextName = prompt("Rename cohort:", cohort)?.trim();
+    if (!nextName || nextName === cohort) return;
+    people.forEach((person) => {
+      if (!(person.cohorts || []).includes(cohort)) return;
+      const next = (person.cohorts || []).map((label) =>
+        label === cohort ? nextName : label,
+      );
+      updatePerson(person.id, { cohorts: Array.from(new Set(next)) });
+    });
+  };
+
+  const handleDeleteCohort = (cohort: string) => {
+    if (!confirm(`Remove cohort "${cohort}" from all people?`)) return;
+    people.forEach((person) => {
+      if (!(person.cohorts || []).includes(cohort)) return;
+      const next = (person.cohorts || []).filter((label) => label !== cohort);
+      updatePerson(person.id, { cohorts: next });
+    });
   };
 
   const handleSaveQuery = () => {
@@ -333,16 +396,76 @@ const AppContent: React.FC = () => {
     exportToCSV(filteredPeople, families, `roommap-export-${timestamp}.csv`);
   };
 
-  // Get highlighted IDs for canvas
-  const highlightedIds = useMemo(() => {
-    if (
-      filteredPeople.length === 0 ||
-      filteredPeople.length === people.length
-    ) {
-      return undefined;
+  const visiblePeople = useMemo(() => {
+    if (viewMode === "activities" || viewMode === "families")
+      return [] as Person[];
+    return useAdvancedFilters ? filteredPeople : (filteredItems as Person[]);
+  }, [viewMode, useAdvancedFilters, filteredPeople, filteredItems]);
+
+  const visibleActivities = useMemo(() => {
+    if (viewMode !== "activities") return activities;
+    return filteredItems as Activity[];
+  }, [viewMode, activities, filteredItems]);
+
+  const visibleFamilies = useMemo(() => {
+    if (viewMode !== "families") return families;
+    return filteredItems as Family[];
+  }, [viewMode, families, filteredItems]);
+
+  const cohortGroups = useMemo(() => {
+    const groups = new Map<string, Person[]>();
+    const unassigned: Person[] = [];
+
+    visiblePeople.forEach((person) => {
+      const cohorts = person.cohorts || [];
+      if (cohorts.length === 0) {
+        unassigned.push(person);
+        return;
+      }
+      cohorts.forEach((cohort) => {
+        if (!groups.has(cohort)) groups.set(cohort, []);
+        groups.get(cohort)!.push(person);
+      });
+    });
+
+    if (unassigned.length > 0) {
+      groups.set("Unassigned", unassigned);
     }
-    return new Set(filteredPeople.map((p) => p.id));
-  }, [filteredPeople, people]);
+
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [visiblePeople]);
+
+  const cohortIndex = useMemo(() => {
+    const groups = new Map<string, Person[]>();
+    people.forEach((person) => {
+      (person.cohorts || []).forEach((cohort) => {
+        if (!groups.has(cohort)) groups.set(cohort, []);
+        groups.get(cohort)!.push(person);
+      });
+    });
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [people]);
+
+  const quickStats = useMemo(() => {
+    const totalPeople = people.length;
+    const totalActivities = activities.length;
+    const totalFamilies = families.length;
+    const connectedPeople = people.filter(
+      (p) => p.connectedActivities.length > 0,
+    ).length;
+    const totalConnections = people.reduce(
+      (sum, p) => sum + p.connections.length,
+      0,
+    );
+
+    return {
+      totalPeople,
+      totalActivities,
+      totalFamilies,
+      connectedPeople,
+      totalConnections,
+    };
+  }, [people, activities, families]);
 
   return (
     <div className="app">
@@ -353,6 +476,7 @@ const AppContent: React.FC = () => {
             onSearchChange={setSearchQuery}
             onAddItem={handleAddItem}
             onImport={() => setIsImportModalOpen(true)}
+            onAddConnection={() => handleAddConnection()}
           />
 
           <div
@@ -396,38 +520,523 @@ const AppContent: React.FC = () => {
             <div className="panel__section">
               <Analytics />
             </div>
+          ) : viewMode === "homevisits" ? (
+            <div className="panel__section">
+              <HomeVisitsTracker />
+            </div>
           ) : (
-            <>
-              <div className="panel__section">
-                <Canvas
-                  filteredItems={
-                    useAdvancedFilters
-                      ? (filteredPeople as (Person | Activity)[])
-                      : (filteredItems as (Person | Activity)[])
-                  }
-                  highlightedIds={
-                    useAdvancedFilters ? highlightedIds : undefined
-                  }
-                />
-              </div>
+            <div className="panel__section">
+              <div className="dashboard-layout">
+                <div className="dashboard-main">
+                  <div className="cards-row">
+                    <div className="stat-card">
+                      <div className="stat-card__label">People</div>
+                      <div className="stat-card__value">
+                        {quickStats.totalPeople}
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-card__label">Activities</div>
+                      <div className="stat-card__value">
+                        {quickStats.totalActivities}
+                      </div>
+                      <div className="stat-card__meta">
+                        Connected: {quickStats.connectedPeople}
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-card__label">Families</div>
+                      <div className="stat-card__value">
+                        {quickStats.totalFamilies}
+                      </div>
+                      <div className="stat-card__meta">
+                        Links: {quickStats.totalConnections}
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="panel__section">
-                <h2>Details</h2>
-                <DetailPanel onEdit={handleEditPerson} />
-                <Statistics />
-                <div className="legend">
-                  <span className="legend__title">Categories</span>
-                  <span className="legend__item legend__item--jy">JY</span>
-                  <span className="legend__item legend__item--cc">CC</span>
-                  <span className="legend__item legend__item--youth">
-                    Youth
-                  </span>
-                  <span className="legend__item legend__item--parents">
-                    Parents
-                  </span>
+                  <div className="data-table-card">
+                    <div className="data-table-card__header">
+                      <h2>
+                        {viewMode === "activities"
+                          ? "Activities"
+                          : viewMode === "families"
+                            ? "Families"
+                            : "People"}
+                      </h2>
+                      <span className="muted">
+                        {viewMode === "activities"
+                          ? visibleActivities.length
+                          : viewMode === "families"
+                            ? visibleFamilies.length
+                            : visiblePeople.length}{" "}
+                        items
+                      </span>
+                    </div>
+                    {viewMode === "activities" ? (
+                      <div className="table-wrap">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Type</th>
+                              <th>Leader</th>
+                              <th>Participants</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {visibleActivities.map((activity) => (
+                              <tr
+                                key={activity.id}
+                                onClick={() =>
+                                  setSelected({
+                                    type: "activities",
+                                    id: activity.id,
+                                  })
+                                }
+                              >
+                                <td>
+                                  <div className="table-title">
+                                    {activity.name}
+                                  </div>
+                                  <div className="table-subtitle">
+                                    {activity.area || "No area"}
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="chip">{activity.type}</span>
+                                </td>
+                                <td>
+                                  {activity.facilitator ||
+                                    activity.leader ||
+                                    "-"}
+                                </td>
+                                <td>
+                                  <div className="chip-row">
+                                    {activity.participantIds.length === 0 &&
+                                      "-"}
+                                    {activity.participantIds
+                                      .slice(0, 3)
+                                      .map((id) => {
+                                        const person = people.find(
+                                          (p) => p.id === id,
+                                        );
+                                        return (
+                                          <span
+                                            key={id}
+                                            className="chip chip--muted"
+                                          >
+                                            {person?.name || "Unknown"}
+                                          </span>
+                                        );
+                                      })}
+                                    {activity.participantIds.length > 3 && (
+                                      <span className="chip chip--muted">
+                                        +{activity.participantIds.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : viewMode === "families" ? (
+                      <div className="table-wrap">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Family</th>
+                              <th>Area</th>
+                              <th>Members</th>
+                              <th>Contact</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {visibleFamilies.map((family) => {
+                              const memberCount = people.filter(
+                                (p) =>
+                                  p.familyId === family.id ||
+                                  p.familyId === family.familyName,
+                              ).length;
+                              return (
+                                <tr
+                                  key={family.id}
+                                  onClick={() =>
+                                    setSelected({
+                                      type: "families",
+                                      id: family.id,
+                                    })
+                                  }
+                                >
+                                  <td>
+                                    <div className="table-title">
+                                      {family.familyName}
+                                    </div>
+                                    <div className="table-subtitle">
+                                      {family.notes || "No notes"}
+                                    </div>
+                                  </td>
+                                  <td>{family.primaryArea || "-"}</td>
+                                  <td>{memberCount}</td>
+                                  <td>
+                                    {(family.phone || family.email) && (
+                                      <div className="chip-row">
+                                        {family.phone && (
+                                          <span className="chip">
+                                            {family.phone}
+                                          </span>
+                                        )}
+                                        {family.email && (
+                                          <span className="chip chip--muted">
+                                            {family.email}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    {!family.phone && !family.email && "-"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="table-wrap">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Area</th>
+                              <th>Age Group</th>
+                              <th>Tags</th>
+                              <th>Connections</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {viewMode === "cohorts"
+                              ? cohortGroups.flatMap(
+                                  ([cohort, cohortPeople], index) => {
+                                    const cohortColor =
+                                      cohortColors[index % cohortColors.length];
+                                    return [
+                                      <tr
+                                        className="group-row"
+                                        key={`group-${cohort}`}
+                                      >
+                                        <td colSpan={6}>{cohort}</td>
+                                      </tr>,
+                                      ...cohortPeople.map((person) => {
+                                        const familyName = person.familyId
+                                          ? families.find(
+                                              (f) => f.id === person.familyId,
+                                            )?.familyName || ""
+                                          : "";
+                                        return (
+                                          <tr
+                                            key={`${cohort}-${person.id}`}
+                                            onClick={() =>
+                                              setSelected({
+                                                type: "people",
+                                                id: person.id,
+                                              })
+                                            }
+                                            className="cohort-row"
+                                            style={{
+                                              borderLeft: `4px solid ${cohortColor}`,
+                                            }}
+                                          >
+                                            <td>
+                                              <div className="table-title">
+                                                {person.name}
+                                              </div>
+                                              <div className="table-subtitle">
+                                                {familyName || "No family"}
+                                              </div>
+                                              <div
+                                                className="chip-row"
+                                                style={{ marginTop: "0.35rem" }}
+                                              >
+                                                {person.connectedActivities
+                                                  .map((id) =>
+                                                    activities.find(
+                                                      (a) => a.id === id,
+                                                    ),
+                                                  )
+                                                  .filter(Boolean)
+                                                  .map((act) => (
+                                                    <span
+                                                      key={act!.id}
+                                                      className="chip chip--activity"
+                                                    >
+                                                      {act!.name}
+                                                    </span>
+                                                  ))}
+                                              </div>
+                                            </td>
+                                            <td>{person.area || "-"}</td>
+                                            <td>
+                                              <span
+                                                className={`chip chip--age-${person.ageGroup}`}
+                                              >
+                                                {person.ageGroup === "JY"
+                                                  ? "JY"
+                                                  : person.ageGroup
+                                                      .charAt(0)
+                                                      .toUpperCase() +
+                                                    person.ageGroup.slice(1)}
+                                              </span>
+                                            </td>
+                                            <td>
+                                              <div className="chip-row">
+                                                {(person.cohorts || []).map(
+                                                  (label) => (
+                                                    <span
+                                                      key={label}
+                                                      className="chip chip--activity"
+                                                    >
+                                                      {label}
+                                                    </span>
+                                                  ),
+                                                )}
+                                                <span
+                                                  className="chip chip--group"
+                                                  style={{
+                                                    borderColor: cohortColor,
+                                                    color: cohortColor,
+                                                  }}
+                                                >
+                                                  Cohort
+                                                </span>
+                                              </div>
+                                            </td>
+                                            <td>
+                                              <div className="chip-row">
+                                                <span className="chip">
+                                                  Activities:{" "}
+                                                  {
+                                                    person.connectedActivities
+                                                      .length
+                                                  }
+                                                </span>
+                                                <span className="chip chip--muted">
+                                                  Links:{" "}
+                                                  {person.connections.length}
+                                                </span>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        );
+                                      }),
+                                    ];
+                                  },
+                                )
+                              : visiblePeople.map((person) => {
+                                  const familyName = person.familyId
+                                    ? families.find(
+                                        (f) => f.id === person.familyId,
+                                      )?.familyName || ""
+                                    : "";
+                                  return (
+                                    <tr
+                                      key={person.id}
+                                      onClick={() =>
+                                        setSelected({
+                                          type: "people",
+                                          id: person.id,
+                                        })
+                                      }
+                                    >
+                                      <td>
+                                        <div className="table-title">
+                                          {person.name}
+                                        </div>
+                                        <div className="table-subtitle">
+                                          {familyName || "No family"}
+                                        </div>
+                                      </td>
+                                      <td>{person.area || "-"}</td>
+                                      <td>
+                                        <span
+                                          className={`chip chip--age-${person.ageGroup}`}
+                                        >
+                                          {person.ageGroup === "JY"
+                                            ? "JY"
+                                            : person.ageGroup
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                              person.ageGroup.slice(1)}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <div className="chip-row">
+                                          {(person.cohorts || []).map(
+                                            (cohort) => (
+                                              <span
+                                                key={cohort}
+                                                className="chip chip--activity"
+                                              >
+                                                {cohort}
+                                              </span>
+                                            ),
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <div className="chip-row">
+                                          <span className="chip">
+                                            Activities:{" "}
+                                            {person.connectedActivities.length}
+                                          </span>
+                                          <span className="chip chip--muted">
+                                            Links: {person.connections.length}
+                                          </span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                <aside className="dashboard-side">
+                  <div className="side-card">
+                    <h2>Details</h2>
+                    <DetailPanel
+                      onEdit={handleEditPerson}
+                      onEditActivity={handleEditActivity}
+                      onEditFamily={handleEditFamily}
+                    />
+                  </div>
+                  {viewMode === "cohorts" && (
+                    <div className="side-card">
+                      <h2>Cohort Manager</h2>
+                      <div className="form-row">
+                        <label className="muted">Cohort Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Northside JY"
+                          value={newCohortName}
+                          onChange={(e) => setNewCohortName(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-row">
+                        <label className="muted">Add People</label>
+                        <select
+                          multiple
+                          size={6}
+                          value={newCohortPeople}
+                          onChange={(e) =>
+                            setNewCohortPeople(
+                              Array.from(
+                                e.target.selectedOptions,
+                                (opt) => opt.value,
+                              ),
+                            )
+                          }
+                        >
+                          {people.map((person) => (
+                            <option key={person.id} value={person.id}>
+                              {person.name}
+                            </option>
+                          ))}
+                        </select>
+                        <small className="hint">
+                          Hold Ctrl/Cmd to select multiple
+                        </small>
+                      </div>
+                      <button
+                        className="btn btn--primary"
+                        onClick={handleCreateCohort}
+                      >
+                        Create Cohort
+                      </button>
+
+                      <div className="cohort-list">
+                        {cohortIndex.length === 0 ? (
+                          <p className="hint">No cohorts yet</p>
+                        ) : (
+                          cohortIndex.map(([cohort, members]) => (
+                            <div key={cohort} className="cohort-item">
+                              <div>
+                                <div className="cohort-name">{cohort}</div>
+                                <div className="cohort-meta">
+                                  {members.length} people
+                                </div>
+                              </div>
+                              <div className="cohort-actions">
+                                <button
+                                  className="btn btn--sm"
+                                  onClick={() => handleRenameCohort(cohort)}
+                                >
+                                  Rename
+                                </button>
+                                <button
+                                  className="btn btn--sm"
+                                  onClick={() => handleDeleteCohort(cohort)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="side-card">
+                    <Statistics />
+                    <div className="legend">
+                      <span className="legend__title">Age Groups</span>
+                      <span className="legend__item legend__item--child">
+                        Child
+                      </span>
+                      <span className="legend__item legend__item--jy">JY</span>
+                      <span className="legend__item legend__item--youth">
+                        Youth
+                      </span>
+                      <span className="legend__item legend__item--adult">
+                        Adult
+                      </span>
+                      <span className="legend__item legend__item--elder">
+                        Elder
+                      </span>
+                    </div>
+                  </div>
+                  <div className="side-card">
+                    <div className="side-card__header">
+                      <h3>Connections Preview</h3>
+                      <span className="muted">Optional</span>
+                    </div>
+                    {showConnections ? (
+                      <div className="mini-network">
+                        <NetworkVisualization
+                          people={people}
+                          showConnections={showConnections}
+                          onNodeClick={(personId) =>
+                            setSelected({ type: "people", id: personId })
+                          }
+                          onAddConnection={(personA, personB) =>
+                            handleAddConnection(personA, personB)
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <p className="hint">
+                        Turn on “Show Connections” to preview the network.
+                      </p>
+                    )}
+                  </div>
+                </aside>
               </div>
-            </>
+            </div>
           )}
 
           <Tools />
@@ -439,19 +1048,32 @@ const AppContent: React.FC = () => {
         onClose={() => {
           setIsModalOpen(false);
           setEditingPersonId(null);
+          setEditingActivityId(null);
         }}
         editingPersonId={editingPersonId}
+        editingActivityId={editingActivityId}
         onAddFamily={handleAddFamily}
       />
 
       <FamilyModal
         isOpen={isFamilyModalOpen}
-        onClose={() => setIsFamilyModalOpen(false)}
+        onClose={() => {
+          setIsFamilyModalOpen(false);
+          setEditingFamilyId(null);
+        }}
+        editingFamilyId={editingFamilyId}
       />
 
       <ImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+      />
+
+      <ConnectionModal
+        isOpen={isConnectionModalOpen}
+        onClose={() => setIsConnectionModalOpen(false)}
+        personA={connectionDraft.personA}
+        personB={connectionDraft.personB}
       />
     </div>
   );

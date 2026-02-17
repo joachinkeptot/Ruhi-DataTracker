@@ -90,8 +90,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   const getNodeColor = (item: Person | Activity): string => {
     if ("ageGroup" in item) {
-      const primaryCat = item.categories[0] || "Unassigned";
-      return `node--${primaryCat.toLowerCase()}`;
+      return `node--${item.ageGroup}`;
     } else {
       return `node--activity-${item.type.toLowerCase()}`;
     }

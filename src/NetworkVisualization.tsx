@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ForceGraph from "force-graph";
-import { Person, ConnectionType } from "./types";
+import { Person } from "./types";
 
 interface NetworkVisualizationProps {
   people: Person[];
@@ -21,8 +21,6 @@ interface NodeData {
 interface LinkData {
   source: string | NodeData;
   target: string | NodeData;
-  connectionType: ConnectionType;
-  strength: number;
 }
 
 interface GraphDataType {
@@ -76,8 +74,6 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           links.push({
             source: person.id,
             target: conn.personId,
-            connectionType: conn.connectionType,
-            strength: conn.strength,
           });
         }
       });
@@ -136,28 +132,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
         if (!source.x || !source.y || !target.x || !target.y) return;
 
-        const connectionType = link.connectionType;
-        const strength = link.strength;
-
-        // Color by type
-        const colorMap: Record<ConnectionType, string> = {
-          family: "#22c55e",
-          school: "#3b82f6",
-          work: "#f97316",
-          neighborhood: "#a855f7",
-          activity: "#ef4444",
-          friendship: "#fbbf24",
-        };
-
-        ctx.strokeStyle = colorMap[connectionType] || "#64748b";
-        ctx.lineWidth = Math.max(1, Math.min(strength / 2, 3));
-
-        // Dashed for weak connections
-        if (strength === 1) {
-          ctx.setLineDash([5, 5]);
-        } else {
-          ctx.setLineDash([]);
-        }
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 1.5;
 
         ctx.beginPath();
         ctx.moveTo(source.x, source.y);
@@ -171,11 +147,13 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           if (!selectedNodeInMode) {
             setSelectedNodeInMode(node.id);
           } else if (selectedNodeInMode !== node.id) {
-            const personA = people.find((p) => p.id === selectedNodeInMode)!;
-            const personB = people.find((p) => p.id === node.id)!;
-            onAddConnection?.(personA, personB);
-            setConnectionMode(false);
-            setSelectedNodeInMode(null);
+            const personA = people.find((p) => p.id === selectedNodeInMode);
+            const personB = people.find((p) => p.id === node.id);
+            if (personA && personB) {
+              onAddConnection?.(personA, personB);
+              setConnectionMode(false);
+              setSelectedNodeInMode(null);
+            }
           } else {
             setSelectedNodeInMode(null);
           }
@@ -188,15 +166,13 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         if (link) {
           const source = link.source as unknown as NodeData;
           const target = link.target as unknown as NodeData;
-          const connectionType = link.connectionType;
-          const strength = link.strength;
           const personA = people.find((p) => p.id === source.id);
           const personB = people.find((p) => p.id === target.id);
 
           setTooltip({
             x: ((source.x || 0) + (target.x || 0)) / 2,
             y: ((source.y || 0) + (target.y || 0)) / 2,
-            text: `${personA?.name} <-> ${personB?.name}\nType: ${connectionType}\nStrength: ${strength}/10`,
+            text: `${personA?.name} <-> ${personB?.name}`,
           });
         } else {
           setTooltip(null);
@@ -218,11 +194,13 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       window.removeEventListener("resize", handleResize);
     };
   }, [
+    graphData,
     showConnections,
     connectionMode,
     selectedNodeInMode,
     onNodeClick,
     onAddConnection,
+    people,
   ]);
 
   if (!showConnections) {

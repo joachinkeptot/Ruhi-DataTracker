@@ -8,10 +8,7 @@ import {
   ImportSummary,
   ImportBackup,
   HomeVisit,
-  Category,
   VisitPurpose,
-  JYTextCompletion,
-  RuhiBookCompletion,
   CCGradeCompletion,
 } from "./types";
 import { FuzzyMatcher } from "./fuzzyMatcher";
@@ -45,6 +42,71 @@ export class ImportExecutor {
   }
 
   /**
+   * Process family intake row
+   */
+  private async processFamily(
+    row: ParsedRow,
+    families: Family[],
+  ): Promise<{
+    action?: ImportAction;
+    error?: { name: string; message: string };
+  }> {
+    const data = row.data;
+    const familyName = data["Family Name"]?.trim();
+
+    if (!familyName) {
+      return {
+        error: {
+          name: "Unknown",
+          message: "Missing required family name",
+        },
+      };
+    }
+
+    const existingFamily = FuzzyMatcher.findFamilyExact(familyName, families);
+    if (existingFamily) {
+      const updates: Partial<Family> = {};
+      if (data["Primary Area"]) updates.primaryArea = data["Primary Area"];
+      if (data["Phone"]) updates.phone = data["Phone"];
+      if (data["Email"]) updates.email = data["Email"];
+      if (data["Notes"]) updates.notes = data["Notes"];
+      if (data["Date Added"]) updates.dateAdded = data["Date Added"];
+      if (data["Last Contact"]) updates.lastContact = data["Last Contact"];
+
+      return {
+        action: {
+          type: "update",
+          entityType: "family",
+          entityId: existingFamily.id,
+          data: updates,
+          beforeData: { ...existingFamily },
+        },
+      };
+    }
+
+    const newFamily: Family = {
+      id: generateId(),
+      familyName,
+      primaryArea: data["Primary Area"] || "",
+      phone: data["Phone"] || undefined,
+      email: data["Email"] || undefined,
+      notes: data["Notes"] || undefined,
+      dateAdded: data["Date Added"] || new Date().toISOString(),
+      lastContact: data["Last Contact"] || undefined,
+    };
+
+    families.push(newFamily);
+
+    return {
+      action: {
+        type: "create",
+        entityType: "family",
+        data: newFamily,
+      },
+    };
+  }
+
+  /**
    * Restore from backup
    */
   restoreBackup(backupId: string): ImportBackup | null {
@@ -72,6 +134,7 @@ export class ImportExecutor {
     let createdFamilies = 0;
     let createdActivities = 0;
     let updatedPeople = 0;
+    let updatedFamilies = 0;
     let updatedActivities = 0;
 
     // Create backup first
@@ -120,40 +183,21 @@ export class ImportExecutor {
             }
             break;
 
-          case "activity":
-            const actResult = await this.processActivity(
-              row,
-              people,
-              activities,
-            );
-            if (actResult.action) {
-              actions.push(actResult.action);
-              if (actResult.action.type === "create") {
-                createdActivities++;
+          case "family":
+            const familyResult = await this.processFamily(row, families);
+            if (familyResult.action) {
+              actions.push(familyResult.action);
+              if (familyResult.action.type === "create") {
+                createdFamilies++;
               } else {
-                updatedActivities++;
+                updatedFamilies++;
               }
             }
-            if (actResult.error) {
+            if (familyResult.error) {
               errors.push({
                 rowNumber: row.rowNumber,
-                entityName: actResult.error.name,
-                reason: actResult.error.message,
-              });
-            }
-            break;
-
-          case "learning":
-            const learnResult = await this.processLearning(row, people);
-            if (learnResult.action) {
-              actions.push(learnResult.action);
-              updatedPeople++;
-            }
-            if (learnResult.error) {
-              errors.push({
-                rowNumber: row.rowNumber,
-                entityName: learnResult.error.name,
-                reason: learnResult.error.message,
+                entityName: familyResult.error.name,
+                reason: familyResult.error.message,
               });
             }
             break;
@@ -199,6 +243,7 @@ export class ImportExecutor {
       },
       updated: {
         people: updatedPeople,
+        families: updatedFamilies,
         activities: updatedActivities,
       },
       errors,
@@ -228,8 +273,9 @@ export class ImportExecutor {
     const personName = data["Person's Full Name"]?.trim();
     const familyName = data["Family Name"]?.trim();
     const area = data["Area/Street"]?.trim();
+    const ageGroup = data["Age Group"]?.trim();
 
-    if (!personName || !familyName || !area) {
+    if (!personName || !area || !ageGroup) {
       return {
         error: {
           name: personName || "Unknown",
@@ -253,10 +299,10 @@ export class ImportExecutor {
         updates.ageGroup = data["Age Group"];
       }
       if (data["Phone"]) {
-        updates.position = { x: 0, y: 0 }; // This would be handled by UI
+        updates.phone = data["Phone"];
       }
       if (data["Email"]) {
-        // Email not in Person type, but could be added to family
+        updates.email = data["Email"];
       }
       if (data["School Name"]) {
         updates.schoolName = data["School Name"];
@@ -264,13 +310,37 @@ export class ImportExecutor {
       if (data["Employment Status"]) {
         updates.employmentStatus = data["Employment Status"];
       }
+      if (data["Is Parent"]) {
+        updates.isParent = CSVParser.parseBoolean(data["Is Parent"]);
+      }
+      if (data["Is Elder"]) {
+        updates.isElder = CSVParser.parseBoolean(data["Is Elder"]);
+      }
+      if (data["Notes"]) {
+        updates.notes = data["Notes"];
+      }
 
-      // Parse categories
-      if (data["Current Categories"]) {
-        const cats = CSVParser.parsePipeDelimited(
-          data["Current Categories"],
-        ) as unknown as Category[];
-        updates.categories = cats;
+      if (familyName) {
+        let family = FuzzyMatcher.findFamilyExact(familyName, families);
+        if (!family) {
+          family = {
+            id: generateId(),
+            familyName,
+            primaryArea: area,
+            phone: data["Phone"] || undefined,
+            email: data["Email"] || undefined,
+            notes: data["Notes"] || undefined,
+            dateAdded: new Date().toISOString(),
+          };
+          families.push(family);
+        }
+        updates.familyId = family.id;
+      }
+
+      // Parse cohorts
+      if (data["Cohorts"]) {
+        const cohortLabels = CSVParser.parsePipeDelimited(data["Cohorts"]);
+        updates.cohorts = cohortLabels;
       }
 
       // Parse connected activities
@@ -294,18 +364,24 @@ export class ImportExecutor {
           updates.ruhiLevel = level;
         }
       }
-
-      // Parse home visit
-      if (data["Home Visit Date"]) {
-        const homeVisit: HomeVisit = {
-          date: data["Home Visit Date"],
-          visitors: [data["Your Name"]],
-          purpose: (data["Purpose"] as VisitPurpose) || "Social",
-          notes: data["Conversation Topics"] || "",
-          followUp: data["Follow-Up Date"],
-          completed: false,
-        };
-        updates.homeVisits = [...(existingPerson.homeVisits || []), homeVisit];
+      if (data["CC Grades"]) {
+        const grades = CSVParser.parsePipeDelimited(data["CC Grades"])
+          .map((g) => CSVParser.parseInteger(g))
+          .filter((g): g is number => g !== null);
+        if (grades.length > 0) {
+          const existingGrades = existingPerson.ccGrades || [];
+          const nextGrades: CCGradeCompletion[] = [...existingGrades];
+          grades.forEach((gradeNumber) => {
+            if (!nextGrades.some((g) => g.gradeNumber === gradeNumber)) {
+              nextGrades.push({
+                gradeNumber,
+                lessonsCompleted: 0,
+                dateCompleted: new Date().toISOString(),
+              });
+            }
+          });
+          updates.ccGrades = nextGrades;
+        }
       }
 
       return {
@@ -323,30 +399,30 @@ export class ImportExecutor {
     let familyId: string | null = null;
     let createdFamily = false;
 
-    // Check for existing family
-    let family = FuzzyMatcher.findFamilyExact(familyName, families);
+    if (familyName) {
+      // Check for existing family
+      let family = FuzzyMatcher.findFamilyExact(familyName, families);
 
-    if (!family) {
-      // Create new family
-      family = {
-        id: generateId(),
-        familyName,
-        primaryArea: area,
-        phone: data["Phone"] || undefined,
-        email: data["Email"] || undefined,
-        notes: data["Notes"] || undefined,
-        dateAdded: new Date().toISOString(),
-      };
-      families.push(family);
-      createdFamily = true;
+      if (!family) {
+        // Create new family
+        family = {
+          id: generateId(),
+          familyName,
+          primaryArea: area,
+          phone: data["Phone"] || undefined,
+          email: data["Email"] || undefined,
+          notes: data["Notes"] || undefined,
+          dateAdded: new Date().toISOString(),
+        };
+        families.push(family);
+        createdFamily = true;
+      }
+
+      familyId = family.id;
     }
 
-    familyId = family.id;
-
     // Build new person
-    const categories = CSVParser.parsePipeDelimited(
-      data["Current Categories"],
-    ) as unknown as Category[];
+    const cohorts = CSVParser.parsePipeDelimited(data["Cohorts"] || "");
     const actNames = CSVParser.parsePipeDelimited(
       data["Connected to Activities"],
     );
@@ -355,35 +431,37 @@ export class ImportExecutor {
       .filter((a) => a !== null)
       .map((a) => (a as Activity).id);
 
-    const homeVisits: HomeVisit[] = [];
-    if (data["Home Visit Date"]) {
-      homeVisits.push({
-        date: data["Home Visit Date"],
-        visitors: [data["Your Name"]],
-        purpose: (data["Purpose"] as VisitPurpose) || "Social",
-        notes: data["Conversation Topics"] || "",
-        followUp: data["Follow-Up Date"],
-        completed: false,
-      });
-    }
+    const ccGrades = CSVParser.parsePipeDelimited(data["CC Grades"] || "")
+      .map((g) => CSVParser.parseInteger(g))
+      .filter((g): g is number => g !== null)
+      .map(
+        (gradeNumber): CCGradeCompletion => ({
+          gradeNumber,
+          lessonsCompleted: 0,
+          dateCompleted: new Date().toISOString(),
+        }),
+      );
 
     const newPerson: Person = {
       id: generateId(),
       name: personName,
       area,
       notes: data["Notes"] || "",
-      categories,
+      cohorts: cohorts.length > 0 ? cohorts : [],
       connectedActivities: actIds,
       jyTexts: [],
       studyCircleBooks: [],
-      ccGrades: [],
+      ccGrades,
       ruhiLevel: CSVParser.parseInteger(data["Ruhi Level"]) || 0,
-      familyId,
+      familyId: familyId || undefined,
       ageGroup: data["Age Group"] || "child",
-      schoolName: data["School Name"] || null,
+      isParent: CSVParser.parseBoolean(data["Is Parent"]),
+      isElder: CSVParser.parseBoolean(data["Is Elder"]),
+      phone: data["Phone"] || undefined,
+      email: data["Email"] || undefined,
+      schoolName: data["School Name"] || undefined,
       employmentStatus: data["Employment Status"] || "student",
-      participationStatus: "new",
-      homeVisits,
+      homeVisits: [],
       conversations: [],
       connections: [],
       dateAdded: new Date().toISOString(),
@@ -400,203 +478,6 @@ export class ImportExecutor {
         data: newPerson,
       },
       createdFamily,
-    };
-  }
-
-  /**
-   * Process activity attendance row
-   */
-  private async processActivity(
-    row: ParsedRow,
-    people: Person[],
-    activities: Activity[],
-  ): Promise<{
-    action?: ImportAction;
-    error?: { name: string; message: string };
-  }> {
-    const data = row.data;
-
-    const activityName = data["Activity Name"]?.trim();
-    const activityType = data["Activity Type"]?.trim();
-    const date = data["Date"]?.trim();
-    const attendeeNamesStr = data["Attendee Names"]?.trim();
-
-    if (!activityName || !activityType || !date) {
-      return {
-        error: {
-          name: activityName || "Unknown",
-          message: "Missing required fields",
-        },
-      };
-    }
-
-    // Parse attendee names
-    const attendeeNames = CSVParser.parseCommaSeparated(attendeeNamesStr);
-
-    // Find or create activity
-    let activity = FuzzyMatcher.findActivityExact(activityName, activities);
-
-    if (!activity) {
-      // Create new activity
-      activity = {
-        id: generateId(),
-        name: activityName,
-        type: activityType as any,
-        facilitator: data["Facilitator Name"] || "",
-        notes: data["Highlights/Notes"] || "",
-        participantIds: [],
-        materials: data["Materials Covered"] || "",
-        dateCreated: new Date().toISOString(),
-        lastModified: new Date().toISOString(),
-        position: undefined,
-      };
-      activities.push(activity);
-    } else {
-      // Update existing activity with latest info
-      activity.facilitator = data["Facilitator Name"] || activity.facilitator;
-      activity.notes = data["Highlights/Notes"] || activity.notes;
-      activity.lastModified = new Date().toISOString();
-    }
-
-    // Match attendees to people and update connections
-    for (const attendeeName of attendeeNames) {
-      const matches = FuzzyMatcher.findSimilarPeople(attendeeName, people, 0.7);
-      if (matches.length > 0) {
-        const bestMatch = matches[0];
-        const person = people.find((p) => p.id === bestMatch.id);
-        if (person && !person.connectedActivities.includes(activity.id)) {
-          person.connectedActivities.push(activity.id);
-        }
-      }
-    }
-
-    return {
-      action: {
-        type: "create",
-        entityType: "activity",
-        data: activity,
-      },
-    };
-  }
-
-  /**
-   * Process learning progress row
-   */
-  private async processLearning(
-    row: ParsedRow,
-    people: Person[],
-  ): Promise<{
-    action?: ImportAction;
-    error?: { name: string; message: string };
-  }> {
-    const data = row.data;
-
-    const personName = data["Person's Name"]?.trim();
-    const learningType = data["Learning Type"]?.trim();
-    const bookNumber = data["Book/Text/Grade Number"]?.trim();
-
-    if (!personName || !learningType || !bookNumber) {
-      return {
-        error: {
-          name: personName || "Unknown",
-          message: "Missing required fields",
-        },
-      };
-    }
-
-    // Find person by name
-    const matches = FuzzyMatcher.findSimilarPeople(personName, people, 0.7);
-    if (matches.length === 0) {
-      return {
-        error: {
-          name: personName,
-          message: `Person "${personName}" not found in system`,
-        },
-      };
-    }
-
-    const person = people.find((p) => p.id === matches[0].id);
-    if (!person) {
-      return {
-        error: {
-          name: personName,
-          message: `Person "${personName}" not found in system`,
-        },
-      };
-    }
-
-    const updates: Partial<Person> = {};
-
-    const dateCompleted =
-      data["Date Completed"] || new Date().toISOString().split("T")[0];
-
-    if (learningType === "Ruhi Book") {
-      // Update Ruhi level and studyCircleBooks
-      const bookNum = CSVParser.parseInteger(bookNumber);
-      if (bookNum !== null) {
-        updates.ruhiLevel = Math.max(person.ruhiLevel, bookNum);
-
-        // Add to study circle books if not already there
-        const bookName = `Ruhi Book ${bookNum}`;
-        const existingBook = person.studyCircleBooks.find(
-          (b) => b.bookNumber === bookNum,
-        );
-        if (!existingBook) {
-          const newBook: RuhiBookCompletion = {
-            bookNumber: bookNum,
-            bookName,
-            dateCompleted,
-            tutor: data["Facilitator Name"],
-            notes: data["Notes"],
-          };
-          updates.studyCircleBooks = [...person.studyCircleBooks, newBook];
-        }
-      }
-    } else if (learningType === "JY Text") {
-      // Add to JY texts
-      const bookNum = CSVParser.parseInteger(bookNumber);
-      if (bookNum !== null) {
-        const existingBook = person.jyTexts.find(
-          (b) => b.bookNumber === bookNum,
-        );
-        if (!existingBook) {
-          const newBook: JYTextCompletion = {
-            bookNumber: bookNum,
-            dateCompleted,
-            animator: data["Facilitator Name"],
-            notes: data["Notes"],
-          };
-          updates.jyTexts = [...person.jyTexts, newBook];
-        }
-      }
-    } else if (learningType === "CC Grade") {
-      // Add to CC grades
-      const gradeNum = CSVParser.parseInteger(bookNumber);
-      if (gradeNum !== null) {
-        const existingGrade = person.ccGrades.find(
-          (g) => g.gradeNumber === gradeNum,
-        );
-        if (!existingGrade) {
-          const newGrade: CCGradeCompletion = {
-            gradeNumber: gradeNum,
-            lessonsCompleted: 20, // Default value, could be from CSV if available
-            dateCompleted,
-            teacher: data["Facilitator Name"],
-            notes: data["Notes"],
-          };
-          updates.ccGrades = [...person.ccGrades, newGrade];
-        }
-      }
-    }
-
-    return {
-      action: {
-        type: "update",
-        entityType: "person",
-        entityId: person.id,
-        data: updates,
-        beforeData: { ...person },
-      },
     };
   }
 
@@ -673,17 +554,23 @@ export class ImportExecutor {
 
     if (family) {
       // Find all people in this family and update them
-      const familyMembers = people.filter((p) => p.familyId === family.id);
-      for (const member of familyMembers) {
-        member.homeVisits = [...(member.homeVisits || []), homeVisit];
+      const familyMembers = people.filter(
+        (p) => p.familyId === family.id || p.familyId === family.familyName,
+      );
+      if (familyMembers.length > 0) {
+        for (const member of familyMembers) {
+          member.homeVisits = [...(member.homeVisits || []), homeVisit];
+        }
+        return {
+          action: {
+            type: "update",
+            entityType: "person",
+            entityId: familyMembers[0].id,
+            data: { homeVisits: familyMembers[0].homeVisits },
+            beforeData: { ...familyMembers[0] },
+          },
+        };
       }
-      return {
-        action: {
-          type: "update",
-          entityType: "person",
-          data: { homeVisits: familyMembers[0]?.homeVisits },
-        },
-      };
     }
 
     return {

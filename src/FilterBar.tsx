@@ -12,10 +12,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
 }) => {
-  const { people, viewMode } = useApp();
+  const { people, families, viewMode } = useApp();
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   const areas = getAreaList(people);
+  const familyAreas = Array.from(
+    new Set(
+      families
+        .map((family) => family.primaryArea)
+        .filter((area) => area && area.trim()),
+    ),
+  ).sort();
 
   const handleChange = (
     field: keyof FilterState,
@@ -46,7 +53,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {!isCollapsed && (
         <div className="filter-bar">
           <div className="filter-row">
-            {viewMode !== "activities" && (
+            {viewMode !== "activities" && viewMode !== "families" && (
               <>
                 <div className="filter-group">
                   <label className="muted">Area</label>
@@ -70,69 +77,31 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     onChange={(e) => handleChange("category", e.target.value)}
                   >
                     <option value="">All</option>
+                    <option value="child">Child</option>
                     <option value="JY">JY</option>
-                    <option value="CC">CC</option>
-                    <option value="Youth">Youth</option>
-                    <option value="Parents">Parents</option>
-                  </select>
-                </div>
-
-                <div className="filter-group">
-                  <label className="muted">Ruhi Level</label>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.25rem",
-                      alignItems: "center",
-                    }}
-                  >
-                    <input
-                      type="number"
-                      min="0"
-                      max="12"
-                      placeholder="Min"
-                      className="filter-input"
-                      value={filters.ruhiMin ?? ""}
-                      onChange={(e) =>
-                        handleChange(
-                          "ruhiMin",
-                          e.target.value ? parseInt(e.target.value) : null,
-                        )
-                      }
-                    />
-                    <span className="muted">–</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="12"
-                      placeholder="Max"
-                      className="filter-input"
-                      value={filters.ruhiMax ?? ""}
-                      onChange={(e) =>
-                        handleChange(
-                          "ruhiMax",
-                          e.target.value ? parseInt(e.target.value) : null,
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <label className="muted">JY Text</label>
-                  <select
-                    value={filters.jyText}
-                    onChange={(e) => handleChange("jyText", e.target.value)}
-                  >
-                    <option value="">All</option>
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                      <option key={num} value={`Book ${num}`}>
-                        Book {num}
-                      </option>
-                    ))}
+                    <option value="youth">Youth</option>
+                    <option value="adult">Adult</option>
+                    <option value="elder">Elder</option>
                   </select>
                 </div>
               </>
+            )}
+
+            {viewMode === "families" && (
+              <div className="filter-group">
+                <label className="muted">Area</label>
+                <select
+                  value={filters.area}
+                  onChange={(e) => handleChange("area", e.target.value)}
+                >
+                  <option value="">All</option>
+                  {familyAreas.map((area) => (
+                    <option key={area} value={area}>
+                      {area}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             {viewMode === "activities" && (

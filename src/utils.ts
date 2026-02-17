@@ -44,16 +44,32 @@ export const loadFromLocalStorage = (): SerializableState | null => {
       // New fields with defaults
       familyId: person.familyId ?? undefined,
       ageGroup: person.ageGroup || "adult",
+      isParent: person.isParent ?? false,
+      isElder: person.isElder ?? false,
       schoolName: person.schoolName || undefined,
       employmentStatus: person.employmentStatus || "employed",
       position: person.position,
+      cohorts: person.cohorts || [],
     }));
 
     const migratedActivities: Activity[] = (data.activities || []).map(
-      (activity) => ({
-        ...activity,
+      (activity: any) => ({
+        id: activity.id,
+        name: activity.name || "",
+        type: activity.type || "JY",
+        facilitator: activity.facilitator || activity.leader || "",
         leader: activity.leader || activity.facilitator || "",
+        area: activity.area || "",
+        participantIds: activity.participantIds || [],
+        averageAttendance: activity.averageAttendance,
+        lastSessionDate: activity.lastSessionDate,
         notes: activity.notes || activity.note || "",
+        note: activity.note || activity.notes || "",
+        materials: activity.materials || "",
+        reflections: activity.reflections || [],
+        dateCreated: activity.dateCreated || new Date().toISOString(),
+        lastModified: activity.lastModified || new Date().toISOString(),
+        position: activity.position,
       }),
     );
 
@@ -63,9 +79,14 @@ export const loadFromLocalStorage = (): SerializableState | null => {
       people: migratedPeople,
       activities: migratedActivities,
       families: migratedFamilies,
+      attendanceRecords: data.attendanceRecords || [],
       savedQueries: data.savedQueries || [],
       selected: data.selected || { type: "people", id: null },
       groupPositions: data.groupPositions || {},
+      canvasPositions: data.canvasPositions,
+      showConnections: data.showConnections ?? false,
+      cohortViewMode: data.cohortViewMode ?? "categories",
+      viewMode: data.viewMode ?? "people",
     };
   } catch (error) {
     console.error("Failed to load from localStorage:", error);

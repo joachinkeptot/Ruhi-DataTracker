@@ -2,11 +2,9 @@ import React, { useState, useMemo } from "react";
 import { useApp } from "./AppContext";
 import {
   AdvancedFilterState,
-  Category,
   AgeGroup,
   ActivityType,
   EmploymentStatus,
-  ParticipationStatus,
   Person,
 } from "./types";
 import { getAreaList } from "./utils";
@@ -73,38 +71,32 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   const clearAll = () => {
     onFilterChange({
       areas: [],
-      categories: [],
       ageGroups: [],
       familyIds: [],
       hasConnections: null,
       connectedActivityTypes: [],
       ruhiMin: null,
       ruhiMax: null,
-      jyTexts: [],
       homeVisitDays: null,
       conversationDays: null,
       employmentStatuses: [],
       inSchool: null,
-      participationStatuses: [],
     });
   };
 
   const hasActiveFilters = useMemo(() => {
     return (
       filters.areas.length > 0 ||
-      filters.categories.length > 0 ||
       filters.ageGroups.length > 0 ||
       filters.familyIds.length > 0 ||
       filters.hasConnections !== null ||
       filters.connectedActivityTypes.length > 0 ||
       filters.ruhiMin !== null ||
       filters.ruhiMax !== null ||
-      filters.jyTexts.length > 0 ||
       filters.homeVisitDays !== null ||
       filters.conversationDays !== null ||
       filters.employmentStatuses.length > 0 ||
-      filters.inSchool !== null ||
-      filters.participationStatuses.length > 0
+      filters.inSchool !== null
     );
   }, [filters]);
 
@@ -213,26 +205,6 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                         {area}
                       </label>
                     ))}
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <label className="muted">Categories</label>
-                  <div className="checkbox-grid">
-                    {(["JY", "CC", "Youth", "Parents"] as Category[]).map(
-                      (cat) => (
-                        <label key={cat} className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={filters.categories.includes(cat)}
-                            onChange={() =>
-                              handleArrayToggle("categories", cat)
-                            }
-                          />
-                          {cat}
-                        </label>
-                      ),
-                    )}
                   </div>
                 </div>
 
@@ -368,80 +340,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             )}
           </div>
 
-          {/* 4. Learning Filters */}
-          <div className="filter-section">
-            <button
-              className="filter-section__header"
-              onClick={() => toggleSection("learning")}
-            >
-              <span>📚 Learning Progress</span>
-              <span>{expandedSections.has("learning") ? "▼" : "▶"}</span>
-            </button>
-            {expandedSections.has("learning") && (
-              <div className="filter-section__body">
-                <div className="filter-group">
-                  <label className="muted">Ruhi Level Range (0-12)</label>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.5rem",
-                      alignItems: "center",
-                    }}
-                  >
-                    <input
-                      type="number"
-                      min="0"
-                      max="12"
-                      placeholder="Min"
-                      value={filters.ruhiMin ?? ""}
-                      onChange={(e) =>
-                        handleChange(
-                          "ruhiMin",
-                          e.target.value ? parseInt(e.target.value) : null,
-                        )
-                      }
-                      style={{ width: "80px" }}
-                    />
-                    <span>to</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="12"
-                      placeholder="Max"
-                      value={filters.ruhiMax ?? ""}
-                      onChange={(e) =>
-                        handleChange(
-                          "ruhiMax",
-                          e.target.value ? parseInt(e.target.value) : null,
-                        )
-                      }
-                      style={{ width: "80px" }}
-                    />
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <label className="muted">JY Texts Completed</label>
-                  <div className="checkbox-grid">
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                      <label key={num} className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={filters.jyTexts.includes(`Book ${num}`)}
-                          onChange={() =>
-                            handleArrayToggle("jyTexts", `Book ${num}`)
-                          }
-                        />
-                        Book {num}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 5. Engagement Filters */}
+          {/* 4. Engagement Filters */}
           <div className="filter-section">
             <button
               className="filter-section__header"
@@ -555,47 +454,6 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                       />
                       No
                     </label>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 7. Participation Filters */}
-          <div className="filter-section">
-            <button
-              className="filter-section__header"
-              onClick={() => toggleSection("participation")}
-            >
-              <span>⭐ Participation</span>
-              <span>{expandedSections.has("participation") ? "▼" : "▶"}</span>
-            </button>
-            {expandedSections.has("participation") && (
-              <div className="filter-section__body">
-                <div className="filter-group">
-                  <label className="muted">Participation Status</label>
-                  <div className="checkbox-grid">
-                    {(
-                      [
-                        "active",
-                        "occasional",
-                        "lapsed",
-                        "new",
-                      ] as ParticipationStatus[]
-                    ).map((status) => (
-                      <label key={status} className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={filters.participationStatuses.includes(
-                            status,
-                          )}
-                          onChange={() =>
-                            handleArrayToggle("participationStatuses", status)
-                          }
-                        />
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </label>
-                    ))}
                   </div>
                 </div>
               </div>

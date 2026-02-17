@@ -19,16 +19,21 @@ export const Tools: React.FC = () => {
 
   const exportPeopleToCsv = () => {
     const rows = [
-      "name,area,note,categories,connectedActivities,jyTexts,studyCircleBooks,ruhiLevel,familyId,familyName,ageGroup,schoolName,employmentStatus,participationStatus",
+      "name,area,note,connectedActivities,jyTexts,studyCircleBooks,ruhiLevel,familyId,familyName,ageGroup,schoolName,employmentStatus",
     ];
 
     people.forEach((person) => {
-      const categoriesText = person.categories.join("|");
       const activityNames = person.connectedActivities
         .map((id) => activities.find((a) => a.id === id)?.name || id)
         .join("|");
       const jyTexts = (person.jyTexts || [])
-        .map((j) => (typeof j === "string" ? j : `Book ${j.bookNumber}`))
+        .map((j) =>
+          j.bookName
+            ? j.bookName
+            : typeof j === "string"
+              ? j
+              : `Book ${j.bookNumber}`,
+        )
         .join("|");
       const familyName = person.familyId
         ? families.find((f) => f.id === person.familyId)?.familyName || ""
@@ -41,7 +46,6 @@ export const Tools: React.FC = () => {
         person.name,
         person.area,
         person.notes || "",
-        categoriesText,
         activityNames,
         jyTexts,
         studyCircles,
@@ -51,7 +55,6 @@ export const Tools: React.FC = () => {
         person.ageGroup,
         person.schoolName || "",
         person.employmentStatus,
-        person.participationStatus,
       ]
         .map((value) => `"${String(value).replace(/"/g, '""')}"`)
         .join(",");
