@@ -888,6 +888,8 @@ input[type="file"] {
   border: 1px solid rgba(212, 165, 116, 0.2);
   border-radius: 12px;
   margin-top: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .stats-breakdown.hidden {

@@ -1,19 +1,21 @@
-import React, { useState, useMemo } from "react";
-import { AppProvider, useApp } from "./AppContext";
-import { Header } from "./Header";
-import { FilterBar } from "./FilterBar";
-import { AdvancedFilters } from "./AdvancedFilters";
-import { NetworkVisualization } from "./NetworkVisualization";
-import { DetailPanel } from "./DetailPanel";
-import { Statistics } from "./Statistics";
-import { Tools } from "./Tools";
-import { ItemModal } from "./ItemModal";
-import { FamilyModal } from "./FamilyModal";
-import { ConnectionModal } from "./ConnectionModal";
-import Analytics from "./Analytics";
-import { Forms } from "./Forms";
-import { HomeVisitsTracker } from "./HomeVisitsTracker";
-import { PublicForms } from "./PublicForms";
+import React, { useState, useMemo, useEffect } from "react";
+import { AppProvider, useApp } from "./context";
+import { Header, Tools } from "./components/common";
+import { FilterBar, AdvancedFilters } from "./components/filters";
+import { NetworkVisualization } from "./components/network";
+import {
+  DetailPanel,
+  Statistics,
+  HomeVisitsTracker,
+} from "./components/panels";
+import { ItemModal, FamilyModal, ConnectionModal } from "./components/modals";
+import { Forms, PublicForms } from "./components/forms";
+import Analytics from "./components/analytics/Analytics";
+import {
+  AnalyticsErrorBoundary,
+  GlobalErrorBoundary,
+} from "./components/errors";
+import { notifyWarning } from "./utils";
 import {
   FilterState,
   AdvancedFilterState,
@@ -24,7 +26,9 @@ import {
   EmploymentStatus,
 } from "./types";
 import { exportToCSV } from "./utils";
-import "./styles.css";
+import "./styles/index.css";
+
+const ITEMS_PER_PAGE = 50;
 
 const AppContent: React.FC = () => {
   const {
@@ -76,6 +80,7 @@ const AppContent: React.FC = () => {
   }>({});
   const [newCohortName, setNewCohortName] = useState("");
   const [newCohortPeople, setNewCohortPeople] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const cohortColors = [
     "#60a5fa",
@@ -333,7 +338,7 @@ const AppContent: React.FC = () => {
     const name = newCohortName.trim();
     if (!name) return;
     if (newCohortPeople.length === 0) {
-      alert("Select at least one person for this cohort");
+      notifyWarning("Select at least one person for this cohort");
       return;
     }
     newCohortPeople.forEach((personId) => {
@@ -411,6 +416,26 @@ const AppContent: React.FC = () => {
     if (viewMode !== "families") return families;
     return filteredItems as Family[];
   }, [viewMode, families, filteredItems]);
+
+  // Reset to first page whenever the filtered list or view changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [viewMode, filteredPeople, filteredItems]);
+
+  const totalItems =
+    viewMode === "activities"
+      ? visibleActivities.length
+      : viewMode === "families"
+        ? visibleFamilies.length
+        : visiblePeople.length;
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageEnd = pageStart + ITEMS_PER_PAGE;
+
+  const pagedPeople = visiblePeople.slice(pageStart, pageEnd);
+  const pagedActivities = visibleActivities.slice(pageStart, pageEnd);
+  const pagedFamilies = visibleFamilies.slice(pageStart, pageEnd);
 
   const cohortGroups = useMemo(() => {
     const groups = new Map<string, Person[]>();
@@ -517,7 +542,9 @@ const AppContent: React.FC = () => {
 
           {viewMode === "analytics" ? (
             <div className="panel__section">
-              <Analytics />
+              <AnalyticsErrorBoundary>
+                <Analytics />
+              </AnalyticsErrorBoundary>
             </div>
           ) : viewMode === "homevisits" ? (
             <div className="panel__section">
@@ -588,7 +615,7 @@ const AppContent: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {visibleActivities.map((activity) => (
+                            {pagedActivities.map((activity) => (
                               <tr
                                 key={activity.id}
                                 onClick={() =>
@@ -657,7 +684,7 @@ const AppContent: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {visibleFamilies.map((family) => {
+                            {pagedFamilies.map((family) => {
                               const memberCount = people.filter(
                                 (p) =>
                                   p.familyId === family.id ||
@@ -837,7 +864,7 @@ const AppContent: React.FC = () => {
                                     ];
                                   },
                                 )
-                              : visiblePeople.map((person) => {
+                              : pagedPeople.map((person) => {
                                   const familyName = person.familyId
                                     ? families.find(
                                         (f) => f.id === person.familyId,
@@ -904,6 +931,40 @@ const AppContent: React.FC = () => {
                                 })}
                           </tbody>
                         </table>
+                      </div>
+                    )}
+                    {totalPages > 1 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "1rem",
+                          padding: "0.75rem 0",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <button
+                          className="btn btn--sm"
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={currentPage === 1}
+                        >
+                          ← Prev
+                        </button>
+                        <span className="muted">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          className="btn btn--sm"
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                        >
+                          Next →
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1091,7 +1152,9 @@ const App: React.FC = () => {
 
   return (
     <AppProvider>
-      <AppContent />
+      <GlobalErrorBoundary>
+        <AppContent />
+      </GlobalErrorBoundary>
     </AppProvider>
   );
 };
