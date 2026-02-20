@@ -635,6 +635,17 @@ input[type="file"] {
   box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4);
 }
 
+.btn--danger {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border: none;
+  color: white;
+}
+
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
 .fab {
   width: 44px;
   height: 44px;

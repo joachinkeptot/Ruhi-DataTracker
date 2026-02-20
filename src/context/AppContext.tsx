@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import {
@@ -74,6 +75,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [cohortViewMode, setCohortViewModeState] =
     useState<CohortViewMode>("categories");
   const [showConnections, setShowConnectionsState] = useState<boolean>(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -92,22 +94,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setIsLoaded(true);
   }, []);
 
-  // Save data on changes (only after initial load)
+  // Save data on changes (only after initial load) — debounced to avoid thrashing
   useEffect(() => {
     if (!isLoaded) return;
 
-    const state = {
-      people,
-      activities,
-      families,
-      savedQueries,
-      selected,
-      groupPositions: Object.fromEntries(groupPositions),
-      viewMode,
-      cohortViewMode,
-      showConnections,
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const state = {
+        people,
+        activities,
+        families,
+        savedQueries,
+        selected,
+        groupPositions: Object.fromEntries(groupPositions),
+        viewMode,
+        cohortViewMode,
+        showConnections,
+      };
+      saveToLocalStorage(state);
+    }, 300);
+
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-    saveToLocalStorage(state);
   }, [
     isLoaded,
     people,

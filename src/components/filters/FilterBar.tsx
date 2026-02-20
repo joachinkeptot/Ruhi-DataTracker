@@ -115,7 +115,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <option value="">All</option>
                   <option value="JY">JY</option>
                   <option value="CC">CC</option>
-                  <option value="StudyCircle">Study Circle</option>
+                  <option value="Study Circle">Study Circle</option>
                   <option value="Devotional">Devotional</option>
                 </select>
               </div>

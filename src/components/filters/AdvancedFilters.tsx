@@ -324,7 +324,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                       [
                         "JY",
                         "CC",
-                        "StudyCircle",
+                        "Study Circle",
                         "Devotional",
                       ] as ActivityType[]
                     ).map((type) => (
@@ -338,7 +338,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                             handleArrayToggle("connectedActivityTypes", type)
                           }
                         />
-                        {type === "Study Circle" ? "Study Circle" : type}
+                        {type}
                       </label>
                     ))}
                   </div>

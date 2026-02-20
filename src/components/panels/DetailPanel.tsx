@@ -214,7 +214,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const typeLabel: Record<string, string> = {
     JY: "Animator",
     CC: "Teacher",
-    StudyCircle: "Tutor",
+    "Study Circle": "Tutor",
     Devotional: "Leader",
   };
 

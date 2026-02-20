@@ -1,40 +1,22 @@
 import React from "react";
 import { useApp } from "../../context";
-import { getAreaList, notifySuccess } from "../../utils";
+import { getAreaList } from "../../utils";
 import { NetworkVisualization } from "../network";
 import { NetworkStats } from "../network";
 
-export const Statistics: React.FC = () => {
+interface StatisticsProps {
+  onAddFamily?: () => void;
+}
+
+export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
   const {
     people,
     activities,
     families,
     viewMode,
     cohortViewMode,
-    addFamily,
     showConnections,
   } = useApp();
-
-  const handleAddFamily = () => {
-    const familyName = prompt("Enter family name:");
-    if (!familyName?.trim()) return;
-
-    const primaryArea = prompt("Enter primary area (optional):") || "";
-    const phone = prompt("Enter phone (optional):") || "";
-    const email = prompt("Enter email (optional):") || "";
-    const notes = prompt("Enter notes (optional):") || "";
-
-    addFamily({
-      familyName: familyName.trim(),
-      primaryArea: primaryArea.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      notes: notes.trim() || undefined,
-      dateAdded: new Date().toISOString(),
-    });
-
-    notifySuccess(`Family "${familyName.trim()}" added successfully!`);
-  };
 
   if (viewMode === "people") {
     const areas = getAreaList(people);
@@ -102,7 +84,7 @@ export const Statistics: React.FC = () => {
             <h5 style={{ margin: 0 }}>Families</h5>
             <button
               className="btn btn--sm btn--primary"
-              onClick={handleAddFamily}
+              onClick={onAddFamily}
             >
               + Family
             </button>
@@ -187,7 +169,7 @@ export const Statistics: React.FC = () => {
           <h5 style={{ margin: 0 }}>Families</h5>
           <button
             className="btn btn--sm btn--primary"
-            onClick={handleAddFamily}
+            onClick={onAddFamily}
           >
             + Family
           </button>
@@ -206,12 +188,12 @@ export const Statistics: React.FC = () => {
   }
 
   if (viewMode === "activities") {
-    const counts = { JY: 0, CC: 0, StudyCircle: 0, Devotional: 0 };
+    const counts: Record<string, number> = { JY: 0, CC: 0, "Study Circle": 0, Devotional: 0 };
     let totalParticipation = 0;
 
     activities.forEach((activity) => {
       if (activity.type in counts)
-        counts[activity.type as keyof typeof counts]++;
+        counts[activity.type]++;
 
       const connectedPeople = people.filter((p) =>
         p.connectedActivities.includes(activity.id),
@@ -231,7 +213,7 @@ export const Statistics: React.FC = () => {
           <h5>Activity Types</h5>
           <p>JY: {counts.JY}</p>
           <p>CC: {counts.CC}</p>
-          <p>Study Circle: {counts.StudyCircle}</p>
+          <p>Study Circle: {counts["Study Circle"]}</p>
           <p>Devotional: {counts.Devotional}</p>
           <h5 style={{ marginTop: "1rem" }}>Participation</h5>
           <p>Total Connections: {totalParticipation}</p>

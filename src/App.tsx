@@ -8,7 +8,7 @@ import {
   Statistics,
   HomeVisitsTracker,
 } from "./components/panels";
-import { ItemModal, FamilyModal, ConnectionModal } from "./components/modals";
+import { ItemModal, FamilyModal, InputModal, ConnectionModal } from "./components/modals";
 import { Forms, PublicForms } from "./components/forms";
 import Analytics from "./components/analytics/Analytics";
 import {
@@ -81,6 +81,9 @@ const AppContent: React.FC = () => {
   const [newCohortName, setNewCohortName] = useState("");
   const [newCohortPeople, setNewCohortPeople] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [renameCohortTarget, setRenameCohortTarget] = useState<string | null>(null);
+  const [deleteCohortTarget, setDeleteCohortTarget] = useState<string | null>(null);
+  const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
 
   const cohortColors = [
     "#60a5fa",
@@ -354,38 +357,50 @@ const AppContent: React.FC = () => {
   };
 
   const handleRenameCohort = (cohort: string) => {
-    const nextName = prompt("Rename cohort:", cohort)?.trim();
-    if (!nextName || nextName === cohort) return;
-    people.forEach((person) => {
-      if (!(person.cohorts || []).includes(cohort)) return;
-      const next = (person.cohorts || []).map((label) =>
-        label === cohort ? nextName : label,
-      );
-      updatePerson(person.id, { cohorts: Array.from(new Set(next)) });
-    });
+    setRenameCohortTarget(cohort);
+  };
+
+  const handleConfirmRenameCohort = (values: Record<string, string>) => {
+    const nextName = values.name?.trim();
+    if (nextName && nextName !== renameCohortTarget) {
+      people.forEach((person) => {
+        if (!(person.cohorts || []).includes(renameCohortTarget!)) return;
+        const next = (person.cohorts || []).map((label) =>
+          label === renameCohortTarget ? nextName : label,
+        );
+        updatePerson(person.id, { cohorts: Array.from(new Set(next)) });
+      });
+    }
+    setRenameCohortTarget(null);
   };
 
   const handleDeleteCohort = (cohort: string) => {
-    if (!confirm(`Remove cohort "${cohort}" from all people?`)) return;
+    setDeleteCohortTarget(cohort);
+  };
+
+  const handleConfirmDeleteCohort = (_values: Record<string, string>) => {
+    if (!deleteCohortTarget) return;
     people.forEach((person) => {
-      if (!(person.cohorts || []).includes(cohort)) return;
-      const next = (person.cohorts || []).filter((label) => label !== cohort);
+      if (!(person.cohorts || []).includes(deleteCohortTarget)) return;
+      const next = (person.cohorts || []).filter((label) => label !== deleteCohortTarget);
       updatePerson(person.id, { cohorts: next });
     });
+    setDeleteCohortTarget(null);
   };
 
   const handleSaveQuery = () => {
-    const name = prompt("Enter a name for this query:");
-    if (!name) return;
+    setShowSaveQueryModal(true);
+  };
 
-    const description = prompt("Enter a description (optional):") || "";
-
+  const handleConfirmSaveQuery = (values: Record<string, string>) => {
+    if (!values.name?.trim()) return;
     addSavedQuery({
-      name: name.trim(),
-      description: description.trim(),
+      name: values.name.trim(),
+      description: values.description?.trim() ?? "",
       filters: advancedFilters,
       createdAt: new Date().toISOString(),
     });
+    setShowSaveQueryModal(false);
   };
 
   const handleLoadQuery = (queryId: string) => {
@@ -1056,7 +1071,7 @@ const AppContent: React.FC = () => {
                     </div>
                   )}
                   <div className="side-card">
-                    <Statistics />
+                    <Statistics onAddFamily={() => setIsFamilyModalOpen(true)} />
                     <div className="legend">
                       <span className="legend__title">Age Groups</span>
                       <span className="legend__item legend__item--child">
@@ -1136,6 +1151,37 @@ const AppContent: React.FC = () => {
         onClose={() => setIsConnectionModalOpen(false)}
         personA={connectionDraft.personA}
         personB={connectionDraft.personB}
+      />
+
+      <InputModal
+        isOpen={renameCohortTarget !== null}
+        title="Rename Cohort"
+        fields={[{ key: "name", label: "New name", defaultValue: renameCohortTarget ?? "", required: true }]}
+        confirmLabel="Rename"
+        onConfirm={handleConfirmRenameCohort}
+        onClose={() => setRenameCohortTarget(null)}
+      />
+
+      <InputModal
+        isOpen={deleteCohortTarget !== null}
+        title="Remove Cohort"
+        message={`Remove cohort "${deleteCohortTarget}" from all people? This cannot be undone.`}
+        confirmLabel="Remove"
+        confirmDanger
+        onConfirm={handleConfirmDeleteCohort}
+        onClose={() => setDeleteCohortTarget(null)}
+      />
+
+      <InputModal
+        isOpen={showSaveQueryModal}
+        title="Save Query"
+        fields={[
+          { key: "name", label: "Name", placeholder: "e.g., Active JY Youth", required: true },
+          { key: "description", label: "Description (optional)", placeholder: "What this query finds" },
+        ]}
+        confirmLabel="Save"
+        onConfirm={handleConfirmSaveQuery}
+        onClose={() => setShowSaveQueryModal(false)}
       />
     </div>
   );
