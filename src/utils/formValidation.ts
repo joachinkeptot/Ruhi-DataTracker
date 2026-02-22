@@ -29,7 +29,16 @@ export const validateRequired = (value: string | undefined | null): boolean => {
 };
 
 /**
- * Validates number is within range
+ * Validates number is within a specified range
+ *
+ * @param value - The number to validate
+ * @param min - Minimum allowed value (inclusive)
+ * @param max - Maximum allowed value (inclusive)
+ * @returns True if value is within range, false otherwise
+ *
+ * @example
+ * validateNumberRange(5, 0, 10) // true
+ * validateNumberRange(15, 0, 10) // false
  */
 export const validateNumberRange = (
   value: number,
@@ -82,7 +91,17 @@ export const validateJSONStructure = (
 };
 
 /**
- * Sanitizes string input to prevent issues
+ * Sanitizes string input for safe storage and display
+ *
+ * Performs the following operations:
+ * - Removes leading/trailing whitespace
+ * - Limits length to 1000 characters to prevent data bloat
+ *
+ * @param value - The string to sanitize
+ * @returns Sanitized string (trimmed and length-limited)
+ *
+ * @example
+ * sanitizeString("  hello world  ") // "hello world"
  */
 export const sanitizeString = (value: string): string => {
   if (typeof value !== "string") return "";
@@ -102,5 +121,95 @@ export const validateCSVColumns = (
   return {
     valid: missingColumns.length === 0,
     missingColumns,
+  };
+};
+
+/**
+ * Validates import CSV data schema for People
+ */
+export interface CSVImportValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export const validateCSVImportSchema = (
+  rows: Record<string, unknown>[],
+): CSVImportValidationResult => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!Array.isArray(rows)) {
+    errors.push("Import data must be an array of records");
+    return { valid: false, errors, warnings };
+  }
+
+  if (rows.length === 0) {
+    errors.push("Import data contains no records");
+    return { valid: false, errors, warnings };
+  }
+
+  const requiredFields = ["name"];
+  const optionalFields = [
+    "area",
+    "familyName",
+    "phone",
+    "email",
+    "ageGroup",
+    "notes",
+  ];
+  const allowedFields = new Set([...requiredFields, ...optionalFields]);
+
+  rows.forEach((row, index) => {
+    const rowNum = index + 2; // +2 for 1-based indexing and header row
+
+    if (typeof row !== "object" || row === null) {
+      errors.push(`Row ${rowNum}: Invalid record format`);
+      return;
+    }
+
+    const record = row as Record<string, unknown>;
+
+    // Check required fields
+    requiredFields.forEach((field) => {
+      if (!record[field] || typeof record[field] !== "string") {
+        errors.push(
+          `Row ${rowNum}: Missing or invalid required field "${field}"`,
+        );
+      }
+    });
+
+    // Validate field types
+    const nameValue = record.name;
+    if (nameValue && typeof nameValue === "string") {
+      if (nameValue.trim().length === 0) {
+        errors.push(`Row ${rowNum}: Name cannot be empty`);
+      } else if (nameValue.length > 255) {
+        warnings.push(`Row ${rowNum}: Name exceeds 255 characters`);
+      }
+    }
+
+    if (record.email && !validateEmail(String(record.email))) {
+      warnings.push(`Row ${rowNum}: Invalid email format`);
+    }
+
+    if (record.phone && !validatePhone(String(record.phone))) {
+      warnings.push(`Row ${rowNum}: Invalid phone format`);
+    }
+
+    // Warn about unknown fields
+    Object.keys(record).forEach((field) => {
+      if (!allowedFields.has(field)) {
+        warnings.push(
+          `Row ${rowNum}: Unknown field "${field}" will be ignored`,
+        );
+      }
+    });
+  });
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
   };
 };

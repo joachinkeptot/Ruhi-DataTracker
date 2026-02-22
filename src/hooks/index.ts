@@ -1,2 +1,4 @@
 export { useAnalyticsMetrics } from "./useAnalyticsMetrics";
-export { useDebounce } from "./useDebounce";
+export { useFilteredData } from "./useFilteredData";
+export { useModalState } from "./useModalState";
+export { useComputedViews } from "./useComputedViews";

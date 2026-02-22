@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const toggleCohortView = () => {
     setCohortViewMode(
-      cohortViewMode === "categories" ? "families" : "categories",
+      cohortViewMode === "categories" ? "groups" : "categories",
     );
   };
 
@@ -108,8 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
         {viewMode === "cohorts" && (
           <>
             <button className="btn btn--sm" onClick={toggleCohortView}>
-              View:{" "}
-              {cohortViewMode === "categories" ? "Categories" : "Families"}
+              View: {cohortViewMode === "categories" ? "Categories" : "Groups"}
             </button>
             <button className="btn btn--sm" onClick={onAddConnection}>
               + Add Connection

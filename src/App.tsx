@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { AppProvider, useApp } from "./context";
 import { Header, Tools } from "./components/common";
 import { FilterBar, AdvancedFilters } from "./components/filters";
@@ -22,20 +22,16 @@ import {
   AnalyticsErrorBoundary,
   GlobalErrorBoundary,
 } from "./components/errors";
-import { notifyWarning } from "./utils";
 import {
-  FilterState,
-  AdvancedFilterState,
-  Person,
-  Activity,
-  Family,
-  ActivityType,
-  EmploymentStatus,
-} from "./types";
+  PeopleTable,
+  ActivitiesTable,
+  FamiliesTable,
+} from "./components/tables";
+import { notifyWarning } from "./utils";
+import { FilterState, AdvancedFilterState, Person } from "./types";
 import { exportToCSV } from "./utils";
+import { useFilteredData, useModalState, useComputedViews } from "./hooks";
 import "./styles/index.css";
-
-const ITEMS_PER_PAGE = 50;
 
 const AppContent: React.FC = () => {
   const {
@@ -50,6 +46,10 @@ const AppContent: React.FC = () => {
     updatePerson,
   } = useApp();
 
+  // Modal and editing state
+  const [modalState, modalActions] = useModalState();
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterState>({
     area: "",
@@ -72,19 +72,7 @@ const AppContent: React.FC = () => {
     employmentStatuses: [],
     inSchool: null,
   });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
-  const [editingActivityId, setEditingActivityId] = useState<string | null>(
-    null,
-  );
-  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
-  const [isFamilyModalOpen, setIsFamilyModalOpen] = useState(false);
   const [useAdvancedFilters, setUseAdvancedFilters] = useState(false);
-  const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
-  const [connectionDraft, setConnectionDraft] = useState<{
-    personA?: Person;
-    personB?: Person;
-  }>({});
   const [newCohortName, setNewCohortName] = useState("");
   const [newCohortPeople, setNewCohortPeople] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -94,7 +82,38 @@ const AppContent: React.FC = () => {
   const [deleteCohortTarget, setDeleteCohortTarget] = useState<string | null>(
     null,
   );
-  const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
+
+  // Get filtered data
+  const { filteredPeople, visiblePeople, visibleActivities, visibleFamilies } =
+    useFilteredData(
+      people,
+      activities,
+      families,
+      searchQuery,
+      filters,
+      advancedFilters,
+      useAdvancedFilters,
+      viewMode,
+    );
+
+  // Get computed views
+  const {
+    totalPages,
+    pagedPeople,
+    pagedActivities,
+    pagedFamilies,
+    cohortGroups,
+    quickStats,
+  } = useComputedViews(
+    people,
+    activities,
+    families,
+    visiblePeople,
+    visibleActivities,
+    visibleFamilies,
+    viewMode,
+    currentPage,
+  );
 
   const cohortColors = [
     "#60a5fa",
@@ -104,249 +123,6 @@ const AppContent: React.FC = () => {
     "#f59e0b",
     "#38bdf8",
   ];
-
-  // Get active items based on view mode
-  const activeItems = useMemo(() => {
-    if (viewMode === "activities") return activities;
-    if (viewMode === "families") return families;
-    return people;
-  }, [viewMode, people, families, activities]);
-
-  // Apply advanced filters with AND logic
-  const filteredPeople = useMemo(() => {
-    let filtered = [...people];
-
-    // Areas filter
-    if (advancedFilters.areas.length > 0) {
-      filtered = filtered.filter((p) => advancedFilters.areas.includes(p.area));
-    }
-
-    // Age groups filter
-    if (advancedFilters.ageGroups.length > 0) {
-      filtered = filtered.filter((p) =>
-        advancedFilters.ageGroups.includes(p.ageGroup),
-      );
-    }
-
-    // Family filter
-    if (advancedFilters.familyIds.length > 0) {
-      filtered = filtered.filter(
-        (p) => p.familyId && advancedFilters.familyIds.includes(p.familyId),
-      );
-    }
-
-    // Has connections filter
-    if (advancedFilters.hasConnections !== null) {
-      filtered = filtered.filter((p) =>
-        advancedFilters.hasConnections
-          ? p.connectedActivities.length > 0
-          : p.connectedActivities.length === 0,
-      );
-    }
-
-    // Connected activity types filter
-    if (advancedFilters.connectedActivityTypes.length > 0) {
-      filtered = filtered.filter((p) => {
-        const personActivities = p.connectedActivities
-          .map((actId) => activities.find((a) => a.id === actId))
-          .filter(Boolean) as Activity[];
-
-        return personActivities.some((act) =>
-          advancedFilters.connectedActivityTypes.includes(
-            act.type as ActivityType,
-          ),
-        );
-      });
-    }
-
-    // Ruhi level range filter
-    if (advancedFilters.ruhiMin !== null) {
-      filtered = filtered.filter(
-        (p) => p.ruhiLevel >= advancedFilters.ruhiMin!,
-      );
-    }
-    if (advancedFilters.ruhiMax !== null) {
-      filtered = filtered.filter(
-        (p) => p.ruhiLevel <= advancedFilters.ruhiMax!,
-      );
-    }
-
-    // Home visit engagement filter
-    if (advancedFilters.homeVisitDays !== null) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - advancedFilters.homeVisitDays);
-
-      filtered = filtered.filter((p) =>
-        p.homeVisits.some((visit) => new Date(visit.date) >= cutoffDate),
-      );
-    }
-
-    // Conversation engagement filter
-    if (advancedFilters.conversationDays !== null) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(
-        cutoffDate.getDate() - advancedFilters.conversationDays,
-      );
-
-      filtered = filtered.filter((p) =>
-        p.conversations.some((conv) => new Date(conv.date) >= cutoffDate),
-      );
-    }
-
-    // Employment status filter
-    if (advancedFilters.employmentStatuses.length > 0) {
-      filtered = filtered.filter(
-        (p) =>
-          p.employmentStatus &&
-          advancedFilters.employmentStatuses.includes(
-            p.employmentStatus as EmploymentStatus,
-          ),
-      );
-    }
-
-    // In school filter
-    if (advancedFilters.inSchool !== null) {
-      filtered = filtered.filter((p) =>
-        advancedFilters.inSchool
-          ? p.schoolName !== undefined && p.schoolName.trim() !== ""
-          : !p.schoolName || p.schoolName.trim() === "",
-      );
-    }
-
-    return filtered;
-  }, [people, activities, advancedFilters]);
-
-  // Apply basic filters and search (legacy support)
-  const filteredItems = useMemo(() => {
-    let items: (Person | Activity | Family)[] = activeItems as (
-      | Person
-      | Activity
-      | Family
-    )[];
-
-    // Text search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      items = items.filter((item) => {
-        const name = (
-          "familyName" in item ? item.familyName : item.name
-        ).toLowerCase();
-
-        if ("ageGroup" in item) {
-          const person = item as Person;
-          const notes = (person.notes || "").toLowerCase();
-          const area = person.area.toLowerCase();
-          const jyTexts = item.jyTexts
-            ? item.jyTexts
-                .map((j) =>
-                  typeof j === "string"
-                    ? j
-                    : j.bookName || `Book ${j.bookNumber}`,
-                )
-                .join(" ")
-                .toLowerCase()
-            : "";
-          return (
-            name.includes(query) ||
-            area.includes(query) ||
-            jyTexts.includes(query) ||
-            notes.includes(query)
-          );
-        } else if ("type" in item) {
-          const activity = item as Activity;
-          const type = activity.type.toLowerCase();
-          const leader = (
-            activity.facilitator ||
-            activity.leader ||
-            ""
-          ).toLowerCase();
-          const activityNotes = (activity.notes || "").toLowerCase();
-          return (
-            name.includes(query) ||
-            type.includes(query) ||
-            leader.includes(query) ||
-            activityNotes.includes(query)
-          );
-        } else {
-          const family = item as Family;
-          const area = (family.primaryArea || "").toLowerCase();
-          const notes = (family.notes || "").toLowerCase();
-          const phone = (family.phone || "").toLowerCase();
-          const email = (family.email || "").toLowerCase();
-          return (
-            name.includes(query) ||
-            area.includes(query) ||
-            notes.includes(query) ||
-            phone.includes(query) ||
-            email.includes(query)
-          );
-        }
-      });
-    }
-
-    // Structured filters
-    if (viewMode !== "activities" && viewMode !== "families") {
-      items = items.filter((item) => {
-        if (!("ageGroup" in item)) return true;
-        const person = item as Person;
-
-        if (filters.area && person.area !== filters.area) return false;
-        if (filters.category && person.ageGroup !== filters.category)
-          return false;
-        return true;
-      });
-    } else if (viewMode === "activities") {
-      items = items.filter((item) => {
-        if ("ageGroup" in item) return true;
-        const activity = item as Activity;
-        if (filters.activityType && activity.type !== filters.activityType)
-          return false;
-        return true;
-      });
-    } else {
-      items = items.filter((item) => {
-        if ("ageGroup" in item || "type" in item) return true;
-        const family = item as Family;
-        if (filters.area && family.primaryArea !== filters.area) return false;
-        return true;
-      });
-    }
-
-    return items;
-  }, [activeItems, searchQuery, filters, viewMode]);
-
-  const handleAddItem = () => {
-    setEditingPersonId(null);
-    setEditingActivityId(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditPerson = (id: string) => {
-    setEditingPersonId(id);
-    setEditingActivityId(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditActivity = (id: string) => {
-    setEditingActivityId(id);
-    setEditingPersonId(null);
-    setIsModalOpen(true);
-  };
-
-  const handleAddFamily = () => {
-    setEditingFamilyId(null);
-    setIsFamilyModalOpen(true);
-  };
-
-  const handleEditFamily = (id: string) => {
-    setEditingFamilyId(id);
-    setIsFamilyModalOpen(true);
-  };
-
-  const handleAddConnection = (personA?: Person, personB?: Person) => {
-    setConnectionDraft({ personA, personB });
-    setIsConnectionModalOpen(true);
-  };
 
   const handleCreateCohort = () => {
     const name = newCohortName.trim();
@@ -400,9 +176,12 @@ const AppContent: React.FC = () => {
     });
     setDeleteCohortTarget(null);
   };
-
-  const handleSaveQuery = () => {
-    setShowSaveQueryModal(true);
+  const handleLoadQuery = (queryId: string) => {
+    const query = savedQueries.find((q) => q.id === queryId);
+    if (query) {
+      setAdvancedFilters(query.filters);
+      setUseAdvancedFilters(true);
+    }
   };
 
   const handleConfirmSaveQuery = (values: Record<string, string>) => {
@@ -413,112 +192,48 @@ const AppContent: React.FC = () => {
       filters: advancedFilters,
       createdAt: new Date().toISOString(),
     });
-    setShowSaveQueryModal(false);
-  };
-
-  const handleLoadQuery = (queryId: string) => {
-    const query = savedQueries.find((q) => q.id === queryId);
-    if (query) {
-      setAdvancedFilters(query.filters);
-      setUseAdvancedFilters(true);
-    }
+    modalActions.setSaveQueryModalOpen(false);
   };
 
   const handleExport = () => {
-    const timestamp = new Date().toISOString().split("T")[0];
-    exportToCSV(filteredPeople, families, `roommap-export-${timestamp}.csv`);
+    try {
+      const timestamp = new Date().toISOString().split("T")[0];
+      exportToCSV(filteredPeople, families, `roommap-export-${timestamp}.csv`);
+    } catch (error) {
+      console.error("Export failed:", error);
+      notifyWarning(
+        error instanceof Error ? error.message : "Failed to export CSV",
+      );
+    }
   };
 
-  const visiblePeople = useMemo(() => {
-    if (viewMode === "activities" || viewMode === "families")
-      return [] as Person[];
-    return useAdvancedFilters ? filteredPeople : (filteredItems as Person[]);
-  }, [viewMode, useAdvancedFilters, filteredPeople, filteredItems]);
+  const handleEditPerson = (id: string) => {
+    modalActions.handleEditPerson(id);
+  };
 
-  const visibleActivities = useMemo(() => {
-    if (viewMode !== "activities") return activities;
-    return filteredItems as Activity[];
-  }, [viewMode, activities, filteredItems]);
+  const handleEditActivity = (id: string) => {
+    modalActions.handleEditActivity(id);
+  };
 
-  const visibleFamilies = useMemo(() => {
-    if (viewMode !== "families") return families;
-    return filteredItems as Family[];
-  }, [viewMode, families, filteredItems]);
+  const handleEditFamily = (id: string) => {
+    modalActions.handleEditFamily(id);
+  };
 
   // Reset to first page whenever the filtered list or view changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [viewMode, filteredPeople, filteredItems]);
+  }, [viewMode, filteredPeople, visibleActivities, visibleFamilies]);
 
-  const totalItems =
-    viewMode === "activities"
-      ? visibleActivities.length
-      : viewMode === "families"
-        ? visibleFamilies.length
-        : visiblePeople.length;
-
-  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
-  const pageEnd = pageStart + ITEMS_PER_PAGE;
-
-  const pagedPeople = visiblePeople.slice(pageStart, pageEnd);
-  const pagedActivities = visibleActivities.slice(pageStart, pageEnd);
-  const pagedFamilies = visibleFamilies.slice(pageStart, pageEnd);
-
-  const cohortGroups = useMemo(() => {
-    const groups = new Map<string, Person[]>();
-    const unassigned: Person[] = [];
-
-    visiblePeople.forEach((person) => {
-      const cohorts = person.cohorts || [];
-      if (cohorts.length === 0) {
-        unassigned.push(person);
-        return;
-      }
-      cohorts.forEach((cohort) => {
-        if (!groups.has(cohort)) groups.set(cohort, []);
-        groups.get(cohort)!.push(person);
-      });
+  const cohortIndex = new Map<string, Person[]>();
+  people.forEach((person) => {
+    (person.cohorts || []).forEach((cohort) => {
+      if (!cohortIndex.has(cohort)) cohortIndex.set(cohort, []);
+      cohortIndex.get(cohort)!.push(person);
     });
-
-    if (unassigned.length > 0) {
-      groups.set("Unassigned", unassigned);
-    }
-
-    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [visiblePeople]);
-
-  const cohortIndex = useMemo(() => {
-    const groups = new Map<string, Person[]>();
-    people.forEach((person) => {
-      (person.cohorts || []).forEach((cohort) => {
-        if (!groups.has(cohort)) groups.set(cohort, []);
-        groups.get(cohort)!.push(person);
-      });
-    });
-    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [people]);
-
-  const quickStats = useMemo(() => {
-    const totalPeople = people.length;
-    const totalActivities = activities.length;
-    const totalFamilies = families.length;
-    const connectedPeople = people.filter(
-      (p) => p.connectedActivities.length > 0,
-    ).length;
-    const totalConnections = people.reduce(
-      (sum, p) => sum + p.connections.length,
-      0,
-    );
-
-    return {
-      totalPeople,
-      totalActivities,
-      totalFamilies,
-      connectedPeople,
-      totalConnections,
-    };
-  }, [people, activities, families]);
+  });
+  const sortedCohortIndex = Array.from(cohortIndex.entries()).sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
 
   return (
     <div className="app">
@@ -527,8 +242,8 @@ const AppContent: React.FC = () => {
           <Header
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            onAddItem={handleAddItem}
-            onAddConnection={() => handleAddConnection()}
+            onAddItem={modalActions.handleAddItem}
+            onAddConnection={() => modalActions.handleAddConnection()}
           />
 
           <div
@@ -563,7 +278,7 @@ const AppContent: React.FC = () => {
               onFilterChange={setAdvancedFilters}
               filteredPeople={filteredPeople}
               onExport={handleExport}
-              onSaveQuery={handleSaveQuery}
+              onSaveQuery={() => modalActions.setSaveQueryModalOpen(true)}
               onLoadQuery={handleLoadQuery}
             />
           )}
@@ -637,335 +352,39 @@ const AppContent: React.FC = () => {
                         items
                       </span>
                     </div>
+
                     {viewMode === "activities" ? (
-                      <div className="table-wrap">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Type</th>
-                              <th>Leader</th>
-                              <th>Participants</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {pagedActivities.map((activity) => (
-                              <tr
-                                key={activity.id}
-                                onClick={() =>
-                                  setSelected({
-                                    type: "activities",
-                                    id: activity.id,
-                                  })
-                                }
-                              >
-                                <td>
-                                  <div className="table-title">
-                                    {activity.name}
-                                  </div>
-                                  <div className="table-subtitle">
-                                    {activity.area || "No area"}
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className="chip">{activity.type}</span>
-                                </td>
-                                <td>
-                                  {activity.facilitator ||
-                                    activity.leader ||
-                                    "-"}
-                                </td>
-                                <td>
-                                  <div className="chip-row">
-                                    {activity.participantIds.length === 0 &&
-                                      "-"}
-                                    {activity.participantIds
-                                      .slice(0, 3)
-                                      .map((id) => {
-                                        const person = people.find(
-                                          (p) => p.id === id,
-                                        );
-                                        return (
-                                          <span
-                                            key={id}
-                                            className="chip chip--muted"
-                                          >
-                                            {person?.name || "Unknown"}
-                                          </span>
-                                        );
-                                      })}
-                                    {activity.participantIds.length > 3 && (
-                                      <span className="chip chip--muted">
-                                        +{activity.participantIds.length - 3}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <ActivitiesTable
+                        activities={pagedActivities}
+                        people={people}
+                        onSelectActivity={(id) =>
+                          setSelected({ type: "activities", id })
+                        }
+                      />
                     ) : viewMode === "families" ? (
-                      <div className="table-wrap">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Family</th>
-                              <th>Area</th>
-                              <th>Members</th>
-                              <th>Contact</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {pagedFamilies.map((family) => {
-                              const memberCount = people.filter(
-                                (p) =>
-                                  p.familyId === family.id ||
-                                  p.familyId === family.familyName,
-                              ).length;
-                              return (
-                                <tr
-                                  key={family.id}
-                                  onClick={() =>
-                                    setSelected({
-                                      type: "families",
-                                      id: family.id,
-                                    })
-                                  }
-                                >
-                                  <td>
-                                    <div className="table-title">
-                                      {family.familyName}
-                                    </div>
-                                    <div className="table-subtitle">
-                                      {family.notes || "No notes"}
-                                    </div>
-                                  </td>
-                                  <td>{family.primaryArea || "-"}</td>
-                                  <td>{memberCount}</td>
-                                  <td>
-                                    {(family.phone || family.email) && (
-                                      <div className="chip-row">
-                                        {family.phone && (
-                                          <span className="chip">
-                                            {family.phone}
-                                          </span>
-                                        )}
-                                        {family.email && (
-                                          <span className="chip chip--muted">
-                                            {family.email}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {!family.phone && !family.email && "-"}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                      <FamiliesTable
+                        families={pagedFamilies}
+                        people={people}
+                        onSelectFamily={(id) =>
+                          setSelected({ type: "families", id })
+                        }
+                      />
                     ) : (
-                      <div className="table-wrap">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Area</th>
-                              <th>Age Group</th>
-                              <th>Tags</th>
-                              <th>Connections</th>
-                              <th>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {viewMode === "cohorts"
-                              ? cohortGroups.flatMap(
-                                  ([cohort, cohortPeople], index) => {
-                                    const cohortColor =
-                                      cohortColors[index % cohortColors.length];
-                                    return [
-                                      <tr
-                                        className="group-row"
-                                        key={`group-${cohort}`}
-                                      >
-                                        <td colSpan={6}>{cohort}</td>
-                                      </tr>,
-                                      ...cohortPeople.map((person) => {
-                                        const familyName = person.familyId
-                                          ? families.find(
-                                              (f) => f.id === person.familyId,
-                                            )?.familyName || ""
-                                          : "";
-                                        return (
-                                          <tr
-                                            key={`${cohort}-${person.id}`}
-                                            onClick={() =>
-                                              setSelected({
-                                                type: "people",
-                                                id: person.id,
-                                              })
-                                            }
-                                            className="cohort-row"
-                                            style={{
-                                              borderLeft: `4px solid ${cohortColor}`,
-                                            }}
-                                          >
-                                            <td>
-                                              <div className="table-title">
-                                                {person.name}
-                                              </div>
-                                              <div className="table-subtitle">
-                                                {familyName || "No family"}
-                                              </div>
-                                              <div
-                                                className="chip-row"
-                                                style={{ marginTop: "0.35rem" }}
-                                              >
-                                                {person.connectedActivities
-                                                  .map((id) =>
-                                                    activities.find(
-                                                      (a) => a.id === id,
-                                                    ),
-                                                  )
-                                                  .filter(Boolean)
-                                                  .map((act) => (
-                                                    <span
-                                                      key={act!.id}
-                                                      className="chip chip--activity"
-                                                    >
-                                                      {act!.name}
-                                                    </span>
-                                                  ))}
-                                              </div>
-                                            </td>
-                                            <td>{person.area || "-"}</td>
-                                            <td>
-                                              <span
-                                                className={`chip chip--age-${person.ageGroup}`}
-                                              >
-                                                {person.ageGroup === "JY"
-                                                  ? "JY"
-                                                  : person.ageGroup
-                                                      .charAt(0)
-                                                      .toUpperCase() +
-                                                    person.ageGroup.slice(1)}
-                                              </span>
-                                            </td>
-                                            <td>
-                                              <div className="chip-row">
-                                                {(person.cohorts || []).map(
-                                                  (label) => (
-                                                    <span
-                                                      key={label}
-                                                      className="chip chip--activity"
-                                                    >
-                                                      {label}
-                                                    </span>
-                                                  ),
-                                                )}
-                                                <span
-                                                  className="chip chip--group"
-                                                  style={{
-                                                    borderColor: cohortColor,
-                                                    color: cohortColor,
-                                                  }}
-                                                >
-                                                  Cohort
-                                                </span>
-                                              </div>
-                                            </td>
-                                            <td>
-                                              <div className="chip-row">
-                                                <span className="chip">
-                                                  Activities:{" "}
-                                                  {
-                                                    person.connectedActivities
-                                                      .length
-                                                  }
-                                                </span>
-                                                <span className="chip chip--muted">
-                                                  Links:{" "}
-                                                  {person.connections.length}
-                                                </span>
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        );
-                                      }),
-                                    ];
-                                  },
-                                )
-                              : pagedPeople.map((person) => {
-                                  const familyName = person.familyId
-                                    ? families.find(
-                                        (f) => f.id === person.familyId,
-                                      )?.familyName || ""
-                                    : "";
-                                  return (
-                                    <tr
-                                      key={person.id}
-                                      onClick={() =>
-                                        setSelected({
-                                          type: "people",
-                                          id: person.id,
-                                        })
-                                      }
-                                    >
-                                      <td>
-                                        <div className="table-title">
-                                          {person.name}
-                                        </div>
-                                        <div className="table-subtitle">
-                                          {familyName || "No family"}
-                                        </div>
-                                      </td>
-                                      <td>{person.area || "-"}</td>
-                                      <td>
-                                        <span
-                                          className={`chip chip--age-${person.ageGroup}`}
-                                        >
-                                          {person.ageGroup === "JY"
-                                            ? "JY"
-                                            : person.ageGroup
-                                                .charAt(0)
-                                                .toUpperCase() +
-                                              person.ageGroup.slice(1)}
-                                        </span>
-                                      </td>
-                                      <td>
-                                        <div className="chip-row">
-                                          {(person.cohorts || []).map(
-                                            (cohort) => (
-                                              <span
-                                                key={cohort}
-                                                className="chip chip--activity"
-                                              >
-                                                {cohort}
-                                              </span>
-                                            ),
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td>
-                                        <div className="chip-row">
-                                          <span className="chip">
-                                            Activities:{" "}
-                                            {person.connectedActivities.length}
-                                          </span>
-                                          <span className="chip chip--muted">
-                                            Links: {person.connections.length}
-                                          </span>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                          </tbody>
-                        </table>
-                      </div>
+                      <PeopleTable
+                        people={
+                          viewMode === "cohorts" ? visiblePeople : pagedPeople
+                        }
+                        activities={activities}
+                        families={families}
+                        onSelectPerson={(id) =>
+                          setSelected({ type: "people", id })
+                        }
+                        viewMode={viewMode}
+                        cohortGroups={
+                          viewMode === "cohorts" ? cohortGroups : []
+                        }
+                        cohortColors={cohortColors}
+                      />
                     )}
                     {totalPages > 1 && (
                       <div
@@ -1058,10 +477,10 @@ const AppContent: React.FC = () => {
                       </button>
 
                       <div className="cohort-list">
-                        {cohortIndex.length === 0 ? (
+                        {sortedCohortIndex.length === 0 ? (
                           <p className="hint">No cohorts yet</p>
                         ) : (
-                          cohortIndex.map(([cohort, members]) => (
+                          sortedCohortIndex.map(([cohort, members]) => (
                             <div key={cohort} className="cohort-item">
                               <div>
                                 <div className="cohort-name">{cohort}</div>
@@ -1090,9 +509,7 @@ const AppContent: React.FC = () => {
                     </div>
                   )}
                   <div className="side-card">
-                    <Statistics
-                      onAddFamily={() => setIsFamilyModalOpen(true)}
-                    />
+                    <Statistics onAddFamily={modalActions.handleAddFamily} />
                     <div className="legend">
                       <span className="legend__title">Age Groups</span>
                       <span className="legend__item legend__item--child">
@@ -1127,7 +544,7 @@ const AppContent: React.FC = () => {
                             setSelected({ type: "people", id: personId })
                           }
                           onAddConnection={(personA, personB) =>
-                            handleAddConnection(personA, personB)
+                            modalActions.handleAddConnection(personA, personB)
                           }
                         />
                       </div>
@@ -1147,31 +564,24 @@ const AppContent: React.FC = () => {
       </main>
 
       <ItemModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingPersonId(null);
-          setEditingActivityId(null);
-        }}
-        editingPersonId={editingPersonId}
-        editingActivityId={editingActivityId}
-        onAddFamily={handleAddFamily}
+        isOpen={modalState.isModalOpen}
+        onClose={modalActions.handleClosePerson}
+        editingPersonId={modalState.editingPersonId}
+        editingActivityId={modalState.editingActivityId}
+        onAddFamily={modalActions.handleAddFamily}
       />
 
       <FamilyModal
-        isOpen={isFamilyModalOpen}
-        onClose={() => {
-          setIsFamilyModalOpen(false);
-          setEditingFamilyId(null);
-        }}
-        editingFamilyId={editingFamilyId}
+        isOpen={modalState.isFamilyModalOpen}
+        onClose={modalActions.handleCloseFamily}
+        editingFamilyId={modalState.editingFamilyId}
       />
 
       <ConnectionModal
-        isOpen={isConnectionModalOpen}
-        onClose={() => setIsConnectionModalOpen(false)}
-        personA={connectionDraft.personA}
-        personB={connectionDraft.personB}
+        isOpen={modalState.isConnectionModalOpen}
+        onClose={modalActions.handleCloseConnection}
+        personA={modalState.connectionDraft.personA}
+        personB={modalState.connectionDraft.personB}
       />
 
       <InputModal
@@ -1201,7 +611,7 @@ const AppContent: React.FC = () => {
       />
 
       <InputModal
-        isOpen={showSaveQueryModal}
+        isOpen={modalState.showSaveQueryModal}
         title="Save Query"
         fields={[
           {
@@ -1218,7 +628,7 @@ const AppContent: React.FC = () => {
         ]}
         confirmLabel="Save"
         onConfirm={handleConfirmSaveQuery}
-        onClose={() => setShowSaveQueryModal(false)}
+        onClose={() => modalActions.setSaveQueryModalOpen(false)}
       />
     </div>
   );

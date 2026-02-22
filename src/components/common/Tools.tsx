@@ -7,15 +7,37 @@ export const Tools: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadFile = (filename: string, content: string, type: string) => {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    try {
+      if (!content || content.length === 0) {
+        notifyError("Empty content", "No data available to export");
+        return;
+      }
+
+      const blob = new Blob([content], { type });
+      if (blob.size === 0) {
+        notifyError("Export failed", "Could not create export file");
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+
+      try {
+        link.click();
+        notifySuccess(`"${filename}" downloaded successfully`, 2000);
+      } finally {
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      notifyError(
+        "Download failed",
+        error instanceof Error ? error.message : "Could not download file",
+      );
+    }
   };
 
   const exportPeopleToCsv = () => {
@@ -199,55 +221,75 @@ export const Tools: React.FC = () => {
   };
 
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      notifyError("No file selected", "Please select a file to import");
+      return;
+    }
+
+    const file = files[0];
+    if (!file) {
+      notifyError("File error", "Could not access the selected file");
+      return;
+    }
 
     try {
+      // Validate file size (limit to 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        notifyError("File too large", "File size must be less than 10MB");
+        return;
+      }
+
       const text = await file.text();
 
-      if (file.name.endsWith(".json")) {
-        try {
-          const data = JSON.parse(text);
-
-          // Validate JSON structure
-          const validation = validateJSONStructure(data);
-          if (!validation.valid) {
-            notifyError(
-              "Invalid JSON structure",
-              validation.error || "Unknown validation error",
-            );
-            return;
-          }
-
-          // Attempt import
-          try {
-            importData(data);
-            notifySuccess("Data imported successfully!", 3000);
-          } catch (importError) {
-            notifyError(
-              "Failed to import data",
-              importError instanceof Error ? importError : undefined,
-            );
-          }
-        } catch (parseError) {
-          notifyError(
-            "Invalid JSON format",
-            "The file does not contain valid JSON. Please check the file and try again.",
-          );
-        }
-      } else {
+      if (!file.name.endsWith(".json")) {
         notifyError(
           "Invalid file type",
           "Please select a .json file to import",
+        );
+        return;
+      }
+
+      try {
+        const data = JSON.parse(text);
+
+        // Validate JSON structure
+        const validation = validateJSONStructure(data);
+        if (!validation.valid) {
+          notifyError(
+            "Invalid JSON structure",
+            validation.error || "Unknown validation error",
+          );
+          return;
+        }
+
+        // Attempt import
+        try {
+          importData(data);
+          notifySuccess("Data imported successfully!", 3000);
+        } catch (importError) {
+          notifyError(
+            "Failed to import data",
+            importError instanceof Error
+              ? importError.message
+              : "Unknown error",
+          );
+        }
+      } catch (parseError) {
+        notifyError(
+          "Invalid JSON format",
+          "The file does not contain valid JSON. Please check the file and try again.",
         );
       }
     } catch (readError) {
       notifyError(
         "Failed to read file",
-        "Could not read the selected file. Please try again with a different file.",
+        readError instanceof Error
+          ? readError.message
+          : "Could not read the selected file. Please try again with a different file.",
       );
     } finally {
-      // Clear file input
+      // Always clear file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }

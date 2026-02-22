@@ -277,7 +277,13 @@ export interface LearningObject {
   dateAdded: string; // ISO 8601
 }
 
-export type CohortViewMode = "categories" | "families" | "connections";
+/**
+ * How to display/organize cohorts within the cohorts view
+ * - "categories": Group by cohort categories
+ * - "groups": Group by family connections/groupings
+ * Note: This is different from ViewMode: "families" which shows Family entities
+ */
+export type CohortViewMode = "categories" | "groups";
 
 // Selected item state
 export interface SelectedItem {

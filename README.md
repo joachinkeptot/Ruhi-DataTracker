@@ -17,9 +17,23 @@ Tracker used for Bahai Activities - Expansion phase
 
 ## Access
 
-Website:
+**Main Application:**
 http://localhost:3000/index-react.html
 
-Forms:
-
+**Public Forms:**
 http://localhost:3000/index-react.html?public=true
+
+### Starting the Development Server
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+The app will automatically open at `http://localhost:3000/index-react.html`

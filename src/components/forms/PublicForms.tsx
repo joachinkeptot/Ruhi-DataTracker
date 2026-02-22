@@ -55,13 +55,25 @@ export const PublicForms: React.FC = () => {
     };
 
     // Store in localStorage for admin to review
-    const existing = JSON.parse(
-      localStorage.getItem("formSubmissions") || "[]",
-    );
-    localStorage.setItem(
-      "formSubmissions",
-      JSON.stringify([...existing, submission]),
-    );
+    let existing = [];
+    try {
+      const stored = localStorage.getItem("formSubmissions");
+      existing = stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Failed to load existing submissions:", error);
+      existing = [];
+    }
+
+    try {
+      localStorage.setItem(
+        "formSubmissions",
+        JSON.stringify([...existing, submission]),
+      );
+    } catch (error) {
+      console.error("Failed to save submission:", error);
+      alert("Error saving form. Please try again.");
+      return;
+    }
 
     setSubmitSuccess(true);
     setTimeout(() => {
@@ -95,13 +107,25 @@ export const PublicForms: React.FC = () => {
     };
 
     // Store in localStorage for admin to review
-    const existing = JSON.parse(
-      localStorage.getItem("formSubmissions") || "[]",
-    );
-    localStorage.setItem(
-      "formSubmissions",
-      JSON.stringify([...existing, submission]),
-    );
+    let existing = [];
+    try {
+      const stored = localStorage.getItem("formSubmissions");
+      existing = stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Failed to load existing submissions:", error);
+      existing = [];
+    }
+
+    try {
+      localStorage.setItem(
+        "formSubmissions",
+        JSON.stringify([...existing, submission]),
+      );
+    } catch (error) {
+      console.error("Failed to save submission:", error);
+      alert("Error saving form. Please try again.");
+      return;
+    }
 
     setSubmitSuccess(true);
     setTimeout(() => {

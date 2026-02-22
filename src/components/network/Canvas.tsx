@@ -31,9 +31,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   useEffect(() => {
     filteredItems.forEach((item) => {
       if (!item.position) {
+        // Clamp position to reasonable bounds
         const newPosition: Position = {
-          x: Math.max(12, Math.random() * 700),
-          y: Math.max(12, Math.random() * 400),
+          x: Math.max(12, Math.min(700, Math.random() * 700)),
+          y: Math.max(12, Math.min(400, Math.random() * 400)),
         };
         if ("ageGroup" in item) {
           updatePersonPosition(item.id, newPosition);
@@ -67,9 +68,16 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (!dragState || !canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
+    // Clamp position within canvas bounds
     const newPosition: Position = {
-      x: e.clientX - rect.left - dragState.offsetX,
-      y: e.clientY - rect.top - dragState.offsetY,
+      x: Math.max(
+        0,
+        Math.min(rect.width || 1000, e.clientX - rect.left - dragState.offsetX),
+      ),
+      y: Math.max(
+        0,
+        Math.min(rect.height || 600, e.clientY - rect.top - dragState.offsetY),
+      ),
     };
 
     if (dragState.type === "people") {

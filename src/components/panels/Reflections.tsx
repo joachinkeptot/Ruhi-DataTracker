@@ -277,7 +277,7 @@ export const Reflections: React.FC = () => {
         style={{ overflowY: "auto", display: "flex", flexDirection: "column" }}
       >
         {showAddForm ? (
-          <div style={{ padding: "1rem", overflowY: "auto", height: "100%" }}>
+          <div className="reflection-form">
             <h3>New Reflection</h3>
             <div className="form-row">
               <label className="muted">Title *</label>
@@ -393,7 +393,7 @@ export const Reflections: React.FC = () => {
             </div>
           </div>
         ) : showEditForm && selectedReflection ? (
-          <div style={{ padding: "1rem", overflowY: "auto", height: "100%" }}>
+          <div className="reflection-form">
             <h3>Edit Reflection</h3>
             <div className="form-row">
               <label className="muted">Title *</label>
@@ -515,7 +515,7 @@ export const Reflections: React.FC = () => {
             </div>
           </div>
         ) : selectedReflection ? (
-          <div style={{ padding: "1rem", overflowY: "auto", height: "100%" }}>
+          <div className="reflection-content">
             <div
               style={{
                 display: "flex",

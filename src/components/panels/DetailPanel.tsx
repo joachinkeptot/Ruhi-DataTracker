@@ -3,6 +3,7 @@ import { useApp } from "../../context";
 import { HomeVisitSection } from "./HomeVisitSection";
 import { ConversationSection } from "./ConversationSection";
 import { ActivityReflections } from "./ActivityReflections";
+import { ConnectedActivitiesSection } from "./ConnectedActivitiesSection";
 
 interface DetailPanelProps {
   onEdit?: (id: string) => void;
@@ -202,6 +203,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         <ConversationSection
           personId={person.id}
           conversations={person.conversations}
+        />
+        <ConnectedActivitiesSection
+          personId={person.id}
+          connectedActivities={person.connectedActivities || []}
         />
       </div>
     );

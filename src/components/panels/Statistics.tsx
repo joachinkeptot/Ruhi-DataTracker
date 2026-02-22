@@ -58,7 +58,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
       );
     }
 
-    if (cohortViewMode === "families") {
+    if (cohortViewMode === "groups") {
       const familyCounts: Record<string, number> = {};
       const noFamily = people.filter((p) => !p.familyId).length;
 
@@ -82,10 +82,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
             }}
           >
             <h5 style={{ margin: 0 }}>Families</h5>
-            <button
-              className="btn btn--sm btn--primary"
-              onClick={onAddFamily}
-            >
+            <button className="btn btn--sm btn--primary" onClick={onAddFamily}>
               + Family
             </button>
           </div>
@@ -167,10 +164,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
           }}
         >
           <h5 style={{ margin: 0 }}>Families</h5>
-          <button
-            className="btn btn--sm btn--primary"
-            onClick={onAddFamily}
-          >
+          <button className="btn btn--sm btn--primary" onClick={onAddFamily}>
             + Family
           </button>
         </div>
@@ -188,12 +182,16 @@ export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
   }
 
   if (viewMode === "activities") {
-    const counts: Record<string, number> = { JY: 0, CC: 0, "Study Circle": 0, Devotional: 0 };
+    const counts: Record<string, number> = {
+      JY: 0,
+      CC: 0,
+      "Study Circle": 0,
+      Devotional: 0,
+    };
     let totalParticipation = 0;
 
     activities.forEach((activity) => {
-      if (activity.type in counts)
-        counts[activity.type]++;
+      if (activity.type in counts) counts[activity.type]++;
 
       const connectedPeople = people.filter((p) =>
         p.connectedActivities.includes(activity.id),

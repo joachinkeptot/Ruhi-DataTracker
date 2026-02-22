@@ -1,7 +1,14 @@
 import { Person } from "../types";
 
 /**
- * Validates that a value is an array
+ * Validates that a value is an array and optionally filters items
+ *
+ * @param value - The value to validate as an array
+ * @param itemValidator - Optional function to validate and filter array items
+ * @returns Validated/filtered array, or empty array if input is not an array
+ *
+ * @example
+ * const numbers = validateArray<number>(input, (item) => typeof item === 'number');
  */
 export const validateArray = <T>(
   value: unknown,

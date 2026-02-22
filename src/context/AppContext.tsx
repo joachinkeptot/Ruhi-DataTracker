@@ -118,27 +118,43 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const state = {
-        people,
-        activities,
-        families,
-        programEvents,
-        learningObjects,
-        reflections,
-        savedQueries,
-        selected,
-        groupPositions: Object.fromEntries(groupPositions),
-        viewMode,
-        cohortViewMode,
-        showConnections,
-      };
-      saveToLocalStorage(state);
+    // Always clear existing timer to prevent stale saves
+    const prevTimer = saveTimer.current;
+    if (prevTimer) {
+      clearTimeout(prevTimer);
+    }
+
+    // Set new timer with current state
+    const timerId = setTimeout(() => {
+      try {
+        const state = {
+          people,
+          activities,
+          families,
+          programEvents,
+          learningObjects,
+          reflections,
+          savedQueries,
+          selected,
+          groupPositions: Object.fromEntries(groupPositions),
+          viewMode,
+          cohortViewMode,
+          showConnections,
+        };
+        saveToLocalStorage(state);
+      } catch (error) {
+        console.error("Failed to auto-save state:", error);
+      }
     }, 300);
 
+    saveTimer.current = timerId;
+
+    // Cleanup: always clear timer on unmount or dependency change
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
     };
   }, [
     isLoaded,

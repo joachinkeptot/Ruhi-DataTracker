@@ -21,8 +21,13 @@ export const Forms: React.FC = () => {
 
   // Form submissions stored in localStorage
   const [submissions, setSubmissions] = useState<FormSubmission[]>(() => {
-    const stored = localStorage.getItem("formSubmissions");
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem("formSubmissions");
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Failed to load form submissions:", error);
+      return [];
+    }
   });
 
   const [activeFormType, setActiveFormType] = useState<FormType | null>(null);
@@ -50,8 +55,13 @@ export const Forms: React.FC = () => {
   const [followUpDate, setFollowUpDate] = useState("");
 
   const saveSubmissions = (subs: FormSubmission[]) => {
-    setSubmissions(subs);
-    localStorage.setItem("formSubmissions", JSON.stringify(subs));
+    try {
+      setSubmissions(subs);
+      localStorage.setItem("formSubmissions", JSON.stringify(subs));
+    } catch (error) {
+      console.error("Failed to save submissions:", error);
+      notifyError("Storage error", "Could not save form submission");
+    }
   };
 
   const handlePersonSubmit = (e: React.FormEvent) => {

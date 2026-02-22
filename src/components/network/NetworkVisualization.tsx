@@ -95,11 +95,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    const ForceGraphConstructor = ForceGraph as unknown as typeof ForceGraph;
-    const graph = new (ForceGraphConstructor as any)(containerRef.current)
+    // ForceGraph is a CommonJS module that doesn't have proper TypeScript definitions
+    // We need to safely instantiate it
+    const ForceGraphConstructor = ForceGraph as typeof ForceGraph;
+    const graph: any = new ForceGraphConstructor(containerRef.current)
       .graphData(graphData)
       .width(width)
       .height(height)
+      // @ts-ignore - ForceGraph library types don't match our NodeData interface
       .nodeCanvasObject((node: NodeData, ctx: CanvasRenderingContext2D) => {
         const size = (node.val || 10) / 2;
 
@@ -126,6 +129,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
             : node.name || "";
         ctx.fillText(displayName, node.x || 0, (node.y || 0) + size + 8);
       })
+      // @ts-ignore - ForceGraph library types don't match our LinkData interface
       .linkCanvasObject((link: LinkData, ctx: CanvasRenderingContext2D) => {
         const source = link.source as unknown as NodeData;
         const target = link.target as unknown as NodeData;
@@ -142,6 +146,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
         ctx.setLineDash([]);
       })
+      // @ts-ignore - ForceGraph library types don't match our NodeData interface
       .onNodeClick((node: NodeData) => {
         if (connectionMode) {
           if (!selectedNodeInMode) {
@@ -162,6 +167,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         }
       })
 
+      // @ts-ignore - ForceGraph library types don't match our LinkData interface
       .onLinkHover((link: LinkData | null) => {
         if (link) {
           const source = link.source as unknown as NodeData;
@@ -177,7 +183,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         } else {
           setTooltip(null);
         }
-      });
+      })
+      .cooldownTicks(30);
 
     graphRef.current = graph;
 
