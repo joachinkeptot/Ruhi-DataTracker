@@ -3,7 +3,20 @@ import { SerializableState, Person, Activity, Family } from "../types";
 const STORAGE_KEY = "roommap_ops_single_v2";
 
 export const generateId = (): string => {
-  return Math.random().toString(36).slice(2, 10);
+  // Use crypto for better randomness if available, otherwise fallback to Math.random()
+  if (
+    typeof window !== "undefined" &&
+    window.crypto &&
+    window.crypto.getRandomValues
+  ) {
+    const arr = new Uint8Array(8);
+    window.crypto.getRandomValues(arr);
+    return Array.from(arr, (byte) => byte.toString(16).padStart(2, "0")).join(
+      "",
+    );
+  }
+  // Fallback for environments without crypto support
+  return Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
 };
 
 export const saveToLocalStorage = (state: SerializableState): void => {
@@ -31,7 +44,6 @@ export const loadFromLocalStorage = (): SerializableState | null => {
       notes: person.notes || person.note || "",
       dateAdded: person.dateAdded || new Date().toISOString(),
       lastModified: person.lastModified || new Date().toISOString(),
-      categories: person.categories || ["Unassigned"],
       connectedActivities: person.connectedActivities || [],
       jyTexts: person.jyTexts || person.jyTextsCompleted || [],
       studyCircleBooks: person.studyCircleBooks || [],
@@ -40,8 +52,6 @@ export const loadFromLocalStorage = (): SerializableState | null => {
       homeVisits: person.homeVisits || [],
       conversations: person.conversations || [],
       connections: person.connections || [],
-      participationStatus: person.participationStatus || "active",
-      // New fields with defaults
       familyId: person.familyId ?? undefined,
       ageGroup: person.ageGroup || "adult",
       isParent: person.isParent ?? false,
@@ -79,6 +89,9 @@ export const loadFromLocalStorage = (): SerializableState | null => {
       people: migratedPeople,
       activities: migratedActivities,
       families: migratedFamilies,
+      programEvents: data.programEvents || [],
+      learningObjects: data.learningObjects || [],
+      reflections: data.reflections || [],
       attendanceRecords: data.attendanceRecords || [],
       savedQueries: data.savedQueries || [],
       selected: data.selected || { type: "people", id: null },

@@ -11,6 +11,9 @@ import {
   Person,
   Activity,
   Family,
+  ProgramEvent,
+  LearningObject,
+  Reflection,
   SelectedItem,
   ViewMode,
   CohortViewMode,
@@ -20,6 +23,17 @@ import {
 import { generateId, saveToLocalStorage, loadFromLocalStorage } from "../utils";
 
 interface AppContextType extends AppState {
+  addProgramEvent: (event: Omit<ProgramEvent, "id">) => void;
+  updateProgramEvent: (id: string, event: Partial<ProgramEvent>) => void;
+  deleteProgramEvent: (id: string) => void;
+  addLearningObject: (obj: Omit<LearningObject, "id">) => void;
+  updateLearningObject: (id: string, obj: Partial<LearningObject>) => void;
+  deleteLearningObject: (id: string) => void;
+  addReflection: (
+    reflection: Omit<Reflection, "id" | "dateCreated" | "lastModified">,
+  ) => void;
+  updateReflection: (id: string, reflection: Partial<Reflection>) => void;
+  deleteReflection: (id: string) => void;
   addPerson: (person: Omit<Person, "id">) => void;
   updatePerson: (id: string, person: Partial<Person>) => void;
   deletePerson: (id: string) => void;
@@ -63,6 +77,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [people, setPeople] = useState<Person[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [families, setFamilies] = useState<Family[]>([]);
+  const [programEvents, setProgramEvents] = useState<ProgramEvent[]>([]);
+  const [learningObjects, setLearningObjects] = useState<LearningObject[]>([]);
+  const [reflections, setReflections] = useState<Reflection[]>([]);
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
   const [selected, setSelectedState] = useState<SelectedItem>({
     type: "people",
@@ -84,6 +101,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setPeople(savedData.people);
       setActivities(savedData.activities);
       setFamilies(savedData.families);
+      setProgramEvents(savedData.programEvents || []);
+      setLearningObjects(savedData.learningObjects || []);
+      setReflections(savedData.reflections || []);
       setSavedQueries(savedData.savedQueries || []);
       setSelectedState(savedData.selected);
       setGroupPositions(new Map(Object.entries(savedData.groupPositions)));
@@ -104,6 +124,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         people,
         activities,
         families,
+        programEvents,
+        learningObjects,
+        reflections,
         savedQueries,
         selected,
         groupPositions: Object.fromEntries(groupPositions),
@@ -122,6 +145,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     people,
     activities,
     families,
+    programEvents,
+    learningObjects,
+    reflections,
     savedQueries,
     selected,
     groupPositions,
@@ -129,6 +155,64 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     cohortViewMode,
     showConnections,
   ]);
+
+  const addProgramEvent = (event: Omit<ProgramEvent, "id">) => {
+    const newEvent: ProgramEvent = { ...event, id: generateId() };
+    setProgramEvents((prev) => [...prev, newEvent]);
+  };
+
+  const updateProgramEvent = (id: string, updates: Partial<ProgramEvent>) => {
+    setProgramEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+    );
+  };
+
+  const deleteProgramEvent = (id: string) => {
+    setProgramEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const addLearningObject = (obj: Omit<LearningObject, "id">) => {
+    setLearningObjects((prev) => [...prev, { ...obj, id: generateId() }]);
+  };
+
+  const updateLearningObject = (
+    id: string,
+    updates: Partial<LearningObject>,
+  ) => {
+    setLearningObjects((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, ...updates } : o)),
+    );
+  };
+
+  const deleteLearningObject = (id: string) => {
+    setLearningObjects((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const addReflection = (
+    reflection: Omit<Reflection, "id" | "dateCreated" | "lastModified">,
+  ) => {
+    const now = new Date().toISOString();
+    const newReflection: Reflection = {
+      ...reflection,
+      id: generateId(),
+      dateCreated: now,
+      lastModified: now,
+    };
+    setReflections((prev) => [...prev, newReflection]);
+  };
+
+  const updateReflection = (id: string, updates: Partial<Reflection>) => {
+    const now = new Date().toISOString();
+    setReflections((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, ...updates, lastModified: now } : r,
+      ),
+    );
+  };
+
+  const deleteReflection = (id: string) => {
+    setReflections((prev) => prev.filter((r) => r.id !== id));
+  };
 
   const addPerson = (person: Omit<Person, "id">) => {
     const newPerson: Person = { ...person, id: generateId() };
@@ -241,6 +325,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     people,
     activities,
     families,
+    programEvents,
+    learningObjects,
+    reflections,
     savedQueries,
     selected,
     groupPositions,
@@ -256,6 +343,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addFamily,
     updateFamily,
     deleteFamily,
+    addProgramEvent,
+    updateProgramEvent,
+    deleteProgramEvent,
+    addLearningObject,
+    updateLearningObject,
+    deleteLearningObject,
+    addReflection,
+    updateReflection,
+    deleteReflection,
     addSavedQuery,
     deleteSavedQuery,
     setSelected,

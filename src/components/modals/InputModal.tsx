@@ -32,6 +32,10 @@ export const InputModal: React.FC<InputModalProps> = ({
 }) => {
   const [values, setValues] = useState<Record<string, string>>({});
 
+  // Re-initialize values whenever the modal opens or fields/defaults change.
+  // We stringify to get a stable comparison without adding the fields array
+  // reference itself (which would re-run every render).
+  const fieldDefaults = fields.map((f) => `${f.key}:${f.defaultValue ?? ""}`).join("|");
   useEffect(() => {
     if (isOpen) {
       const defaults: Record<string, string> = {};
@@ -40,7 +44,8 @@ export const InputModal: React.FC<InputModalProps> = ({
       });
       setValues(defaults);
     }
-  }, [isOpen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, fieldDefaults]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

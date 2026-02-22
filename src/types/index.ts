@@ -198,6 +198,29 @@ export interface AttendanceRecord {
 // UI & APPLICATION STATE
 // ============================================================================
 
+export type ReflectionType =
+  | "meeting"
+  | "call"
+  | "one-on-one"
+  | "team"
+  | "other";
+
+export interface Reflection {
+  id: string; // UUID
+  title: string; // Brief title of the reflection
+  type: ReflectionType; // Type of interaction
+  date: string; // ISO 8601 date
+  attendees?: string[]; // Names of people involved
+  personIds?: string[]; // IDs of connected people from the database
+  notes: string; // Detailed reflection text
+  keyTakeaways?: string; // Main points/learnings
+  nextSteps?: string; // Action items
+  followUpDate?: string; // When to reconnect
+  tags?: string[]; // Custom tags for organization
+  dateCreated: string; // ISO 8601 timestamp
+  lastModified: string; // ISO 8601 timestamp
+}
+
 export type ViewMode =
   | "people"
   | "cohorts"
@@ -205,7 +228,54 @@ export type ViewMode =
   | "activities"
   | "homevisits"
   | "analytics"
-  | "forms";
+  | "forms"
+  | "programs"
+  | "reflections";
+
+// ============================================================================
+// PROGRAMS — Children's Festivals, JY Intensives, Study Circles
+// ============================================================================
+
+export type ProgramKind = "children-festival" | "jy-intensive" | "study-circle";
+
+export type ProgramStatus = "planned" | "ongoing" | "completed" | "cancelled";
+
+export interface ProgramTeamMember {
+  personId?: string; // optional link to a Person in the db
+  name: string;
+  role?: string; // e.g. "Coordinator", "Tutor", "Animator"
+}
+
+export interface ProgramNote {
+  id: string;
+  date: string; // ISO 8601
+  text: string;
+}
+
+export interface ProgramEvent {
+  id: string;
+  kind: ProgramKind;
+  title: string;
+  date: string; // primary event date (ISO 8601)
+  endDate?: string; // optional end date for multi-day events
+  location?: string;
+  status: ProgramStatus;
+  team: ProgramTeamMember[];
+  reflections: string; // free-form reflection block
+  trackingNotes: ProgramNote[]; // timestamped tracking log
+  dateAdded: string; // ISO 8601, used for sort order
+}
+
+// Objects of Learning
+export type LearningObjectStatus = "active" | "completed";
+
+export interface LearningObject {
+  id: string;
+  statement: string; // e.g. "We are learning how to raise capacity for..."
+  notes?: string;
+  status: LearningObjectStatus;
+  dateAdded: string; // ISO 8601
+}
 
 export type CohortViewMode = "categories" | "families" | "connections";
 
@@ -226,6 +296,9 @@ export interface AppState {
   families: Family[];
   people: Person[];
   activities: Activity[];
+  programEvents: ProgramEvent[];
+  learningObjects: LearningObject[];
+  reflections: Reflection[];
   attendanceRecords?: AttendanceRecord[];
 
   // UI State
@@ -292,6 +365,9 @@ export interface SerializableState {
   people: Person[];
   activities: Activity[];
   families: Family[];
+  programEvents?: ProgramEvent[];
+  learningObjects?: LearningObject[];
+  reflections?: Reflection[];
   attendanceRecords?: AttendanceRecord[];
   selected: SelectedItem;
   canvasPositions?: CanvasPositions;

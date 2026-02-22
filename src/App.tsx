@@ -7,8 +7,15 @@ import {
   DetailPanel,
   Statistics,
   HomeVisitsTracker,
+  ProgramsPanel,
+  Reflections,
 } from "./components/panels";
-import { ItemModal, FamilyModal, InputModal, ConnectionModal } from "./components/modals";
+import {
+  ItemModal,
+  FamilyModal,
+  InputModal,
+  ConnectionModal,
+} from "./components/modals";
 import { Forms, PublicForms } from "./components/forms";
 import Analytics from "./components/analytics/Analytics";
 import {
@@ -81,8 +88,12 @@ const AppContent: React.FC = () => {
   const [newCohortName, setNewCohortName] = useState("");
   const [newCohortPeople, setNewCohortPeople] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [renameCohortTarget, setRenameCohortTarget] = useState<string | null>(null);
-  const [deleteCohortTarget, setDeleteCohortTarget] = useState<string | null>(null);
+  const [renameCohortTarget, setRenameCohortTarget] = useState<string | null>(
+    null,
+  );
+  const [deleteCohortTarget, setDeleteCohortTarget] = useState<string | null>(
+    null,
+  );
   const [showSaveQueryModal, setShowSaveQueryModal] = useState(false);
 
   const cohortColors = [
@@ -382,7 +393,9 @@ const AppContent: React.FC = () => {
     if (!deleteCohortTarget) return;
     people.forEach((person) => {
       if (!(person.cohorts || []).includes(deleteCohortTarget)) return;
-      const next = (person.cohorts || []).filter((label) => label !== deleteCohortTarget);
+      const next = (person.cohorts || []).filter(
+        (label) => label !== deleteCohortTarget,
+      );
       updatePerson(person.id, { cohorts: next });
     });
     setDeleteCohortTarget(null);
@@ -555,7 +568,9 @@ const AppContent: React.FC = () => {
             />
           )}
 
-          {viewMode === "analytics" ? (
+          {viewMode === "programs" ? (
+            <ProgramsPanel />
+          ) : viewMode === "analytics" ? (
             <div className="panel__section">
               <AnalyticsErrorBoundary>
                 <Analytics />
@@ -568,6 +583,10 @@ const AppContent: React.FC = () => {
           ) : viewMode === "forms" ? (
             <div className="panel__section">
               <Forms />
+            </div>
+          ) : viewMode === "reflections" ? (
+            <div className="panel__section">
+              <Reflections />
             </div>
           ) : (
             <div className="panel__section">
@@ -1071,7 +1090,9 @@ const AppContent: React.FC = () => {
                     </div>
                   )}
                   <div className="side-card">
-                    <Statistics onAddFamily={() => setIsFamilyModalOpen(true)} />
+                    <Statistics
+                      onAddFamily={() => setIsFamilyModalOpen(true)}
+                    />
                     <div className="legend">
                       <span className="legend__title">Age Groups</span>
                       <span className="legend__item legend__item--child">
@@ -1156,7 +1177,14 @@ const AppContent: React.FC = () => {
       <InputModal
         isOpen={renameCohortTarget !== null}
         title="Rename Cohort"
-        fields={[{ key: "name", label: "New name", defaultValue: renameCohortTarget ?? "", required: true }]}
+        fields={[
+          {
+            key: "name",
+            label: "New name",
+            defaultValue: renameCohortTarget ?? "",
+            required: true,
+          },
+        ]}
         confirmLabel="Rename"
         onConfirm={handleConfirmRenameCohort}
         onClose={() => setRenameCohortTarget(null)}
@@ -1176,8 +1204,17 @@ const AppContent: React.FC = () => {
         isOpen={showSaveQueryModal}
         title="Save Query"
         fields={[
-          { key: "name", label: "Name", placeholder: "e.g., Active JY Youth", required: true },
-          { key: "description", label: "Description (optional)", placeholder: "What this query finds" },
+          {
+            key: "name",
+            label: "Name",
+            placeholder: "e.g., Active JY Youth",
+            required: true,
+          },
+          {
+            key: "description",
+            label: "Description (optional)",
+            placeholder: "What this query finds",
+          },
         ]}
         confirmLabel="Save"
         onConfirm={handleConfirmSaveQuery}

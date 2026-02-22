@@ -83,11 +83,25 @@ export const Header: React.FC<HeaderProps> = ({
           Forms
         </button>
         <button
+          className={`tab ${viewMode === "programs" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("programs")}
+          role="tab"
+        >
+          Programs
+        </button>
+        <button
           className={`tab ${viewMode === "analytics" ? "tab--active" : ""}`}
           onClick={() => handleViewChange("analytics")}
           role="tab"
         >
           Analytics
+        </button>
+        <button
+          className={`tab ${viewMode === "reflections" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("reflections")}
+          role="tab"
+        >
+          Reflections
         </button>
       </div>
       <div className="board__actions">
