@@ -43,6 +43,10 @@ interface CensusData {
   tractPop: number;
   races: RaceBreakdown[]; // sorted descending by count, filtered to count > 0
   medianIncome: number | null; // null if census returns -666666666 (N/A)
+  medianAge: number | null;
+  povertyRate: number | null; // 0–100 percentage
+  bachelorsOrHigherPct: number | null; // 0–100 percentage (pop 25+)
+  employmentRate: number | null; // 0–100 percentage (of labor force)
 }
 
 type CensusCache = { [area: string]: CensusData | null };
@@ -147,14 +151,24 @@ async function fetchACSData(
 ): Promise<CensusData | null> {
   const fields = [
     "B01003_001E", // total pop
-    "B02001_002E", // white
-    "B02001_003E", // black
-    "B02001_004E", // AIAN
-    "B02001_005E", // asian
-    "B02001_006E", // NHPI
-    "B02001_007E", // other
-    "B02001_008E", // two or more
-    "B19013_001E", // median income
+    "B01002_001E", // median age
+    "B02001_002E", // white alone
+    "B02001_003E", // black alone
+    "B02001_004E", // AIAN alone
+    "B02001_005E", // asian alone
+    "B02001_006E", // NHPI alone
+    "B02001_007E", // other race alone
+    "B02001_008E", // two or more races
+    "B19013_001E", // median household income
+    "B17001_001E", // poverty status universe
+    "B17001_002E", // below poverty level
+    "B15003_001E", // education universe (25+)
+    "B15003_022E", // bachelor's degree
+    "B15003_023E", // master's degree
+    "B15003_024E", // professional school degree
+    "B15003_025E", // doctorate degree
+    "B23025_002E", // in labor force
+    "B23025_004E", // employed
   ].join(",");
   try {
     const url =
@@ -166,10 +180,37 @@ async function fetchACSData(
     const json: string[][] = await res.json();
     if (!Array.isArray(json) || json.length < 2) return null;
     const [header, row] = [json[0], json[1]];
-    const get = (field: string) =>
+    const getInt = (field: string) =>
       parseInt(row[header.indexOf(field)] ?? "-1", 10);
-    const tractPop = get("B01003_001E");
-    const income = get("B19013_001E");
+    const getFloat = (field: string) =>
+      parseFloat(row[header.indexOf(field)] ?? "-1");
+
+    const tractPop = getInt("B01003_001E");
+    const income = getInt("B19013_001E");
+    const medianAge = getFloat("B01002_001E");
+
+    // Poverty rate
+    const povertyUniverse = getInt("B17001_001E");
+    const belowPoverty = getInt("B17001_002E");
+    const povertyRate =
+      povertyUniverse > 0 ? (belowPoverty / povertyUniverse) * 100 : null;
+
+    // Education: bachelor's or higher (pop 25+)
+    const eduUniverse = getInt("B15003_001E");
+    const bachelorsPlus =
+      getInt("B15003_022E") +
+      getInt("B15003_023E") +
+      getInt("B15003_024E") +
+      getInt("B15003_025E");
+    const bachelorsOrHigherPct =
+      eduUniverse > 0 ? (bachelorsPlus / eduUniverse) * 100 : null;
+
+    // Employment rate (% of labor force employed)
+    const laborForce = getInt("B23025_002E");
+    const employed = getInt("B23025_004E");
+    const employmentRate =
+      laborForce > 0 ? (employed / laborForce) * 100 : null;
+
     const RACE_LABELS: { field: string; label: string }[] = [
       { field: "B02001_002E", label: "White" },
       { field: "B02001_003E", label: "Black / African American" },
@@ -181,14 +222,19 @@ async function fetchACSData(
     ];
     const races: RaceBreakdown[] = RACE_LABELS.map(({ field, label }) => ({
       label,
-      count: Math.max(0, get(field)),
+      count: Math.max(0, getInt(field)),
     }))
       .filter((r) => r.count > 0)
       .sort((a, b) => b.count - a.count);
+
     return {
       tractPop: Math.max(0, tractPop),
       races,
       medianIncome: income > 0 ? income : null,
+      medianAge: medianAge > 0 ? medianAge : null,
+      povertyRate: povertyRate !== null && povertyUniverse > 0 ? Math.round(povertyRate * 10) / 10 : null,
+      bachelorsOrHigherPct: bachelorsOrHigherPct !== null && eduUniverse > 0 ? Math.round(bachelorsOrHigherPct * 10) / 10 : null,
+      employmentRate: employmentRate !== null && laborForce > 0 ? Math.round(employmentRate * 10) / 10 : null,
     };
   } catch {
     return null;
@@ -548,14 +594,35 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                         <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
                           Census tract demographics
                         </div>
-                        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                          Tract population:{" "}
+                        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>
+                          Population:{" "}
                           <strong style={{ color: "#374151" }}>{census.tractPop.toLocaleString()}</strong>
+                          {census.medianAge !== null && (
+                            <span> · Median age: <strong style={{ color: "#374151" }}>{census.medianAge}</strong></span>
+                          )}
                         </div>
                         {census.medianIncome !== null && (
-                          <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
-                            Median household income:{" "}
+                          <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>
+                            Median income:{" "}
                             <strong style={{ color: "#374151" }}>${census.medianIncome.toLocaleString()}</strong>
+                          </div>
+                        )}
+                        {census.povertyRate !== null && (
+                          <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>
+                            Poverty rate:{" "}
+                            <strong style={{ color: "#374151" }}>{census.povertyRate}%</strong>
+                          </div>
+                        )}
+                        {census.bachelorsOrHigherPct !== null && (
+                          <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>
+                            Bachelor's or higher:{" "}
+                            <strong style={{ color: "#374151" }}>{census.bachelorsOrHigherPct}%</strong>
+                          </div>
+                        )}
+                        {census.employmentRate !== null && (
+                          <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
+                            Employment rate:{" "}
+                            <strong style={{ color: "#374151" }}>{census.employmentRate}%</strong>
                           </div>
                         )}
                         <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>Race breakdown:</div>
