@@ -231,13 +231,13 @@ body {
 }
 
 .search-input:hover {
-  border-color: rgba(212, 165, 116, 0.5);
+  border-color: rgba(99, 102, 241, 0.5);
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 /* Filter bar */
@@ -328,7 +328,7 @@ body {
 
 .tab:hover:not(.tab--active) {
   color: var(--text);
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .tab:focus-visible {
@@ -392,7 +392,7 @@ body {
   background:
     radial-gradient(
       circle at 20% 20%,
-      rgba(212, 165, 116, 0.08),
+      rgba(99, 102, 241, 0.08),
       transparent 40%
     ),
     radial-gradient(
@@ -426,13 +426,13 @@ body {
 }
 
 .links-layer line {
-  stroke: rgba(212, 165, 116, 0.35);
+  stroke: rgba(99, 102, 241, 0.35);
   stroke-width: 1.5;
 }
 
 .area-bubble {
-  fill: rgba(212, 165, 116, 0.08);
-  stroke: rgba(212, 165, 116, 0.25);
+  fill: rgba(99, 102, 241, 0.08);
+  stroke: rgba(99, 102, 241, 0.25);
   stroke-width: 2;
   pointer-events: auto;
   cursor: grab;
@@ -442,8 +442,8 @@ body {
 }
 
 .area-bubble:hover {
-  fill: rgba(212, 165, 116, 0.12);
-  stroke: rgba(212, 165, 116, 0.4);
+  fill: rgba(99, 102, 241, 0.12);
+  stroke: rgba(99, 102, 241, 0.4);
 }
 
 .area-bubble:active {
@@ -473,7 +473,7 @@ body {
 .node--selected {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 1px rgba(212, 165, 116, 0.4),
+    0 0 0 1px rgba(99, 102, 241, 0.4),
     0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
@@ -691,7 +691,7 @@ input[type="file"] {
 
 .btn:hover:not(:disabled) {
   border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(212, 165, 116, 0.2);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
   transform: translateY(-1px);
 }
 
@@ -755,7 +755,7 @@ input[type="file"] {
 }
 
 .btn--secondary:hover:not(:disabled) {
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .btn--active {
@@ -804,7 +804,7 @@ input[type="file"] {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(212, 165, 116, 0.3);
+  border: 3px solid rgba(99, 102, 241, 0.3);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -969,8 +969,8 @@ input[type="file"] {
 
 .stats-breakdown {
   padding: 0.8rem;
-  background: rgba(212, 165, 116, 0.05);
-  border: 1px solid rgba(212, 165, 116, 0.2);
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 12px;
   margin-top: 1rem;
 }
@@ -1397,7 +1397,7 @@ input[type="file"] {
 }
 
 .filter-section__header:hover {
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .filter-section__body {
@@ -1432,7 +1432,7 @@ input[type="file"] {
 }
 
 .checkbox-label:hover {
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .checkbox-label input[type="checkbox"],
@@ -1477,7 +1477,7 @@ input[type="file"] {
 .stat-card {
   padding: 0.75rem;
   background: rgba(45, 85, 140, 0.1);
-  border: 1px solid rgba(212, 165, 116, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 8px;
 }
 
@@ -1512,7 +1512,7 @@ input[type="file"] {
   padding: 0.4rem 0;
   font-size: 0.8rem;
   color: #e6eef8;
-  border-bottom: 1px solid rgba(212, 165, 116, 0.1);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 .stat-card.list li:last-child {
@@ -1650,14 +1650,14 @@ input[type="file"] {
 
 .type-button:hover {
   border-color: var(--accent);
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   transform: translateY(-2px);
 }
 
 .type-button.selected {
   border-color: var(--accent);
-  background: rgba(212, 165, 116, 0.2);
-  box-shadow: 0 0 20px rgba(212, 165, 116, 0.3);
+  background: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
 .type-icon {
@@ -1687,20 +1687,20 @@ input[type="file"] {
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: rgba(212, 165, 116, 0.05);
+  background: rgba(99, 102, 241, 0.05);
   position: relative;
   overflow: hidden;
 }
 
 .dropzone:hover {
   border-color: var(--accent);
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .dropzone.dragover {
   border-color: var(--accent);
-  background: rgba(212, 165, 116, 0.2);
-  box-shadow: 0 0 30px rgba(212, 165, 116, 0.3);
+  background: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
 }
 
 .dropzone-content {
@@ -1791,7 +1791,7 @@ input[type="file"] {
 }
 
 .preview-table th {
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   padding: 0.8rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
@@ -1801,7 +1801,7 @@ input[type="file"] {
 
 .preview-table td {
   padding: 0.8rem;
-  border-bottom: 1px solid rgba(212, 165, 116, 0.1);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 .preview-table tr:last-child td {
@@ -2030,7 +2030,7 @@ input[type="file"] {
 
 .button-primary:hover:not(:disabled) {
   background: #3ab5d8;
-  box-shadow: 0 0 20px rgba(212, 165, 116, 0.4);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
 }
 
 .button-secondary {
@@ -2195,7 +2195,7 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  background: rgba(212, 165, 116, 0.05);
+  background: rgba(99, 102, 241, 0.05);
   border-radius: 4px;
 }
 
@@ -2227,9 +2227,9 @@ button:disabled {
 .stat-item {
   text-align: center;
   padding: 1rem;
-  background: rgba(212, 165, 116, 0.05);
+  background: rgba(99, 102, 241, 0.05);
   border-radius: 8px;
-  border: 1px solid rgba(212, 165, 116, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .stat-value {
@@ -2266,7 +2266,7 @@ button:disabled {
 
 .area-bar {
   height: 32px;
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   border-radius: 4px;
   overflow: hidden;
   position: relative;
@@ -2539,13 +2539,13 @@ button:disabled {
   color: var(--text);
   transition: all 0.2s;
   cursor: help;
-  background: rgba(212, 165, 116, 0.1);
-  border: 1px solid rgba(212, 165, 116, 0.2);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .heatmap-cell:hover {
   transform: scale(1.1);
-  box-shadow: 0 0 8px rgba(212, 165, 116, 0.5);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
 }
 
 .heatmap-empty {
@@ -2576,7 +2576,7 @@ button:disabled {
 
 .insight-item {
   padding: 0.75rem 1rem;
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   border-left: 3px solid var(--accent);
   border-radius: 4px;
   color: var(--text);
@@ -2605,7 +2605,7 @@ button:disabled {
 .btn--primary:hover {
   opacity: 0.9;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 @media (max-width: 1024px) {
@@ -2760,7 +2760,7 @@ button:disabled {
 .search-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.15);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
   background: var(--panel-2);
 }
 
@@ -2784,7 +2784,7 @@ button:disabled {
 .filter-select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.15);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
 }
 
 /* Layout */
@@ -2890,9 +2890,9 @@ button:disabled {
 }
 
 .tracker-table tbody tr.tracker-row:hover {
-  background: rgba(212, 165, 116, 0.08);
+  background: rgba(99, 102, 241, 0.08);
   transform: scale(1.005);
-  box-shadow: 0 4px 16px rgba(212, 165, 116, 0.15);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
 }
 
 .tracker-table tbody tr.tracker-row:hover::before {
@@ -2900,9 +2900,9 @@ button:disabled {
 }
 
 .tracker-table tbody tr.tracker-row.selected {
-  background: rgba(212, 165, 116, 0.15);
+  background: rgba(99, 102, 241, 0.15);
   border-left: 4px solid var(--accent);
-  box-shadow: 0 4px 20px rgba(212, 165, 116, 0.25);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
 }
 
 .tracker-table tbody tr.tracker-row.selected::before {
@@ -2951,8 +2951,8 @@ button:disabled {
 .age-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: rgba(212, 165, 116, 0.15);
-  border: 1px solid rgba(212, 165, 116, 0.3);
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 700;
@@ -3060,9 +3060,9 @@ button:disabled {
 }
 
 .days-indicator.recent {
-  background: rgba(212, 165, 116, 0.2);
+  background: rgba(99, 102, 241, 0.2);
   color: var(--accent);
-  border: 1px solid rgba(212, 165, 116, 0.4);
+  border: 1px solid rgba(99, 102, 241, 0.4);
 }
 
 .days-indicator.moderate {
@@ -3148,19 +3148,19 @@ button:disabled {
 
 .action-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 165, 116, 0.25);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25);
 }
 
 .action-btn--visit {
   border-color: var(--accent);
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   color: var(--accent);
 }
 
 .action-btn--visit:hover {
   background: var(--accent);
   color: #070b14;
-  box-shadow: 0 6px 20px rgba(212, 165, 116, 0.4);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 }
 
 .action-btn--conv {
@@ -3230,7 +3230,7 @@ button:disabled {
 
 .history-item:hover {
   border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(212, 165, 116, 0.2);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
   transform: translateX(4px);
 }
 
@@ -3365,7 +3365,7 @@ button:disabled {
   border-color: var(--accent);
   background: var(--panel-2);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(212, 165, 116, 0.2);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
 }
 
 .form-card-icon {
@@ -3438,7 +3438,7 @@ button:disabled {
   outline: none;
   border-color: var(--accent);
   background: var(--panel);
-  box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.15);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
 }
 
 .form-textarea {
@@ -3489,7 +3489,7 @@ button:disabled {
 }
 
 .submission-card:hover {
-  box-shadow: 0 4px 16px rgba(212, 165, 116, 0.15);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
 }
 
 .submission-header {
@@ -3668,9 +3668,9 @@ button:disabled {
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: rgba(212, 165, 116, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   color: var(--accent);
-  border: 1px solid rgba(212, 165, 116, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .chip--age-JY {
