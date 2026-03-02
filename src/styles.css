@@ -2029,7 +2029,7 @@ input[type="file"] {
 }
 
 .button-primary:hover:not(:disabled) {
-  background: #3ab5d8;
+  background: #818cf8;
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
 }
 
