@@ -47,6 +47,12 @@ interface CensusData {
   povertyRate: number | null; // 0–100 percentage
   bachelorsOrHigherPct: number | null; // 0–100 percentage (pop 25+)
   employmentRate: number | null; // 0–100 percentage (of labor force)
+  // New fields
+  medianRent: number | null;
+  hispanicPct: number | null;
+  foreignBornPct: number | null;
+  spanishSpeakingPct: number | null;
+  under18Pct: number | null;
 }
 
 type CensusCache = { [area: string]: CensusData | null };
@@ -99,7 +105,7 @@ function saveGeoCache(cache: GeoCache) {
   }
 }
 
-const CENSUS_CACHE_KEY = "roommap_census_cache";
+const CENSUS_CACHE_KEY = "roommap_census_cache_v2";
 
 function loadCensusCache(): CensusCache {
   try {
@@ -169,6 +175,15 @@ async function fetchACSData(
     "B15003_025E", // doctorate degree
     "B23025_002E", // in labor force
     "B23025_004E", // employed
+    "B25064_001E", // median gross rent
+    "B03002_001E", // Hispanic/Latino universe
+    "B03002_012E", // Hispanic or Latino
+    "B05001_001E", // nativity universe
+    "B05001_005E", // naturalized citizen (foreign born)
+    "B05001_006E", // not a citizen (foreign born)
+    "B16001_001E", // language spoken at home universe (5+)
+    "B16001_002E", // speaks Spanish
+    "B09001_001E", // population under 18
   ].join(",");
   try {
     const url =
@@ -211,6 +226,29 @@ async function fetchACSData(
     const employmentRate =
       laborForce > 0 ? (employed / laborForce) * 100 : null;
 
+    // Median rent
+    const rentRaw = getInt("B25064_001E");
+    const medianRent = rentRaw > 0 ? rentRaw : null;
+
+    // Hispanic/Latino %
+    const hispUniverse = getInt("B03002_001E");
+    const hispanic = getInt("B03002_012E");
+    const hispanicPct = hispUniverse > 0 ? Math.round((hispanic / hispUniverse) * 1000) / 10 : null;
+
+    // Foreign born %
+    const nativityUniverse = getInt("B05001_001E");
+    const foreignBorn = getInt("B05001_005E") + getInt("B05001_006E");
+    const foreignBornPct = nativityUniverse > 0 ? Math.round((foreignBorn / nativityUniverse) * 1000) / 10 : null;
+
+    // Spanish speaking %
+    const langUniverse = getInt("B16001_001E");
+    const spanishSpeakers = getInt("B16001_002E");
+    const spanishSpeakingPct = langUniverse > 0 ? Math.round((spanishSpeakers / langUniverse) * 1000) / 10 : null;
+
+    // Under 18 %
+    const under18 = getInt("B09001_001E");
+    const under18Pct = tractPop > 0 ? Math.round((under18 / tractPop) * 1000) / 10 : null;
+
     const RACE_LABELS: { field: string; label: string }[] = [
       { field: "B02001_002E", label: "White" },
       { field: "B02001_003E", label: "Black / African American" },
@@ -235,6 +273,11 @@ async function fetchACSData(
       povertyRate: povertyRate !== null && povertyUniverse > 0 ? Math.round(povertyRate * 10) / 10 : null,
       bachelorsOrHigherPct: bachelorsOrHigherPct !== null && eduUniverse > 0 ? Math.round(bachelorsOrHigherPct * 10) / 10 : null,
       employmentRate: employmentRate !== null && laborForce > 0 ? Math.round(employmentRate * 10) / 10 : null,
+      medianRent,
+      hispanicPct,
+      foreignBornPct,
+      spanishSpeakingPct,
+      under18Pct,
     };
   } catch {
     return null;
@@ -559,6 +602,51 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
     return activities.filter((a) => a.area?.trim() && visibleAreaSet.has(a.area.trim())).length;
   }, [filteredPeople, activities]);
 
+  // Aggregate census stats across all people pins that have census data
+  const neighborhoodOverview = useMemo(() => {
+    const entries = peoplePins
+      .map((p) => censusCache[p.area])
+      .filter((c): c is CensusData => c != null);
+    if (entries.length === 0) return null;
+
+    const totalPop = entries.reduce((s, c) => s + c.tractPop, 0);
+    if (totalPop === 0) return null;
+
+    const wavg = (get: (c: CensusData) => number | null) => {
+      let num = 0, den = 0;
+      for (const c of entries) {
+        const v = get(c);
+        if (v !== null) { num += v * c.tractPop; den += c.tractPop; }
+      }
+      return den > 0 ? Math.round((num / den) * 10) / 10 : null;
+    };
+
+    // Race totals across all tracts
+    const raceTotals: Record<string, number> = {};
+    for (const c of entries) {
+      for (const r of c.races) {
+        raceTotals[r.label] = (raceTotals[r.label] ?? 0) + r.count;
+      }
+    }
+    const topRaces = Object.entries(raceTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([label, count]) => ({ label, pct: Math.round((count / totalPop) * 100) }));
+
+    return {
+      areas: entries.length,
+      totalPop,
+      medianIncome: wavg((c) => c.medianIncome),
+      povertyRate: wavg((c) => c.povertyRate),
+      medianRent: wavg((c) => c.medianRent),
+      hispanicPct: wavg((c) => c.hispanicPct),
+      foreignBornPct: wavg((c) => c.foreignBornPct),
+      spanishSpeakingPct: wavg((c) => c.spanishSpeakingPct),
+      under18Pct: wavg((c) => c.under18Pct),
+      topRaces,
+    };
+  }, [peoplePins, censusCache]);
+
   return (
     <div
       style={{ display: "flex", height: "calc(100vh - 160px)", overflow: "hidden" }}
@@ -729,6 +817,42 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                             +{census.races.length - 4} more groups
                           </div>
                         )}
+                        {/* New stats row */}
+                        <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+                          {census.medianRent !== null && (
+                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                              Median rent:{" "}
+                              <strong style={{ color: "#374151" }}>${census.medianRent.toLocaleString()}/mo</strong>
+                            </div>
+                          )}
+                          {census.hispanicPct !== null && (
+                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                              Hispanic / Latino:{" "}
+                              <strong style={{ color: "#374151" }}>{census.hispanicPct}%</strong>
+                            </div>
+                          )}
+                          {census.foreignBornPct !== null && (
+                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                              Foreign born:{" "}
+                              <strong style={{ color: "#374151" }}>{census.foreignBornPct}%</strong>
+                            </div>
+                          )}
+                          {census.spanishSpeakingPct !== null && (
+                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                              Spanish-speaking:{" "}
+                              <strong style={{ color: "#374151" }}>{census.spanishSpeakingPct}%</strong>
+                            </div>
+                          )}
+                          {census.under18Pct !== null && (
+                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                              Under 18:{" "}
+                              <strong style={{ color: "#374151" }}>{census.under18Pct}%</strong>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 9, color: "#d1d5db", marginTop: 4 }}>
+                          Source: ACS 5-yr estimates (2019–2023)
+                        </div>
                       </div>
                     );
                   })()}
@@ -961,6 +1085,92 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                 <strong style={{ color: "#374151" }}>{visibleAreaActivityCount}</strong>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Neighborhood overview */}
+        {neighborhoodOverview && (
+          <div
+            style={{
+              background: "var(--panel-2, #f4efea)",
+              borderRadius: 8,
+              padding: "10px 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 5,
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: 12, color: "#374151", marginBottom: 2 }}>
+              Neighborhood overview
+              <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>
+                ({neighborhoodOverview.areas} tract{neighborhoodOverview.areas !== 1 ? "s" : ""})
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: "#6b7280" }}>
+              Total tract pop:{" "}
+              <strong style={{ color: "#374151" }}>{neighborhoodOverview.totalPop.toLocaleString()}</strong>
+            </div>
+            {neighborhoodOverview.medianIncome !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Median income:{" "}
+                <strong style={{ color: "#374151" }}>${Math.round(neighborhoodOverview.medianIncome).toLocaleString()}</strong>
+              </div>
+            )}
+            {neighborhoodOverview.medianRent !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Median rent:{" "}
+                <strong style={{ color: "#374151" }}>${Math.round(neighborhoodOverview.medianRent).toLocaleString()}/mo</strong>
+              </div>
+            )}
+            {neighborhoodOverview.povertyRate !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Poverty rate:{" "}
+                <strong style={{ color: "#374151" }}>{neighborhoodOverview.povertyRate}%</strong>
+              </div>
+            )}
+            {neighborhoodOverview.hispanicPct !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Hispanic / Latino:{" "}
+                <strong style={{ color: "#374151" }}>{neighborhoodOverview.hispanicPct}%</strong>
+              </div>
+            )}
+            {neighborhoodOverview.foreignBornPct !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Foreign born:{" "}
+                <strong style={{ color: "#374151" }}>{neighborhoodOverview.foreignBornPct}%</strong>
+              </div>
+            )}
+            {neighborhoodOverview.spanishSpeakingPct !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Spanish-speaking:{" "}
+                <strong style={{ color: "#374151" }}>{neighborhoodOverview.spanishSpeakingPct}%</strong>
+              </div>
+            )}
+            {neighborhoodOverview.under18Pct !== null && (
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                Under 18:{" "}
+                <strong style={{ color: "#374151" }}>{neighborhoodOverview.under18Pct}%</strong>
+              </div>
+            )}
+            {neighborhoodOverview.topRaces.length > 0 && (
+              <div style={{ marginTop: 3 }}>
+                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>Race breakdown:</div>
+                {neighborhoodOverview.topRaces.map(({ label, pct }) => (
+                  <div key={label} style={{ marginBottom: 3 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#374151" }}>
+                      <span>{label}</span>
+                      <span style={{ fontWeight: 600 }}>{pct}%</span>
+                    </div>
+                    <div style={{ background: "#e5e7eb", borderRadius: 3, height: 3, marginTop: 1 }}>
+                      <div style={{ background: "#6366f1", borderRadius: 3, height: 3, width: `${pct}%`, transition: "width 0.3s" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ fontSize: 9, color: "#9ca3af", marginTop: 2 }}>
+              ACS 5-yr estimates (2019–2023) · weighted avg
+            </div>
           </div>
         )}
 
