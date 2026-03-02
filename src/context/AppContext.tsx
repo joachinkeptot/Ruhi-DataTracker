@@ -51,6 +51,7 @@ interface AppContextType extends AppState {
   setShowConnections: (show: boolean) => void;
   updatePersonPosition: (id: string, position: Position) => void;
   updateActivityPosition: (id: string, position: Position) => void;
+  updateAreaNickname: (area: string, nickname: string) => void;
   importData: (data: {
     people?: Person[];
     activities?: Activity[];
@@ -92,6 +93,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [cohortViewMode, setCohortViewModeState] =
     useState<CohortViewMode>("categories");
   const [showConnections, setShowConnectionsState] = useState<boolean>(false);
+  const [areaNicknames, setAreaNicknames] = useState<Record<string, string>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load initial data
@@ -110,6 +112,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setViewModeState(savedData.viewMode || "people");
       setCohortViewModeState(savedData.cohortViewMode || "categories");
       setShowConnectionsState(savedData.showConnections ?? false);
+      setAreaNicknames(savedData.areaNicknames || {});
     }
     setIsLoaded(true);
   }, []);
@@ -140,6 +143,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           viewMode,
           cohortViewMode,
           showConnections,
+          areaNicknames,
         };
         saveToLocalStorage(state);
       } catch (error) {
@@ -170,6 +174,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     viewMode,
     cohortViewMode,
     showConnections,
+    areaNicknames,
   ]);
 
   const addProgramEvent = (event: Omit<ProgramEvent, "id">) => {
@@ -327,6 +332,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     );
   };
 
+  const updateAreaNickname = (area: string, nickname: string) => {
+    setAreaNicknames((prev) => {
+      if (!nickname.trim()) {
+        const next = { ...prev };
+        delete next[area];
+        return next;
+      }
+      return { ...prev, [area]: nickname.trim() };
+    });
+  };
+
   const importData = (data: {
     people?: Person[];
     activities?: Activity[];
@@ -350,6 +366,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     viewMode,
     cohortViewMode,
     showConnections,
+    areaNicknames,
+    updateAreaNickname,
     addPerson,
     updatePerson,
     deletePerson,

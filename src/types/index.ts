@@ -314,6 +314,9 @@ export interface AppState {
   cohortViewMode: CohortViewMode;
   showConnections: boolean;
 
+  // Area nicknames: maps raw area string → friendly nickname
+  areaNicknames: Record<string, string>;
+
   // Queries
   savedQueries: SavedQuery[];
 
@@ -383,6 +386,7 @@ export interface SerializableState {
   viewMode?: ViewMode;
   cohortViewMode?: CohortViewMode;
   showConnections?: boolean;
+  areaNicknames?: Record<string, string>;
 }
 
 // ============================================================================

@@ -361,11 +361,15 @@ function FitBounds({
 // ── MapView ────────────────────────────────────────────────────────────────────
 
 export function MapView({ people: filteredPeople }: MapViewProps) {
-  const { people: allPeople, activities, updatePerson, updateActivity } = useApp();
+  const { people: allPeople, activities, updatePerson, updateActivity, areaNicknames, updateAreaNickname } = useApp();
 
   // Inline area rename state: area name being edited → draft value
   const [editingArea, setEditingArea] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+
+  // Nickname edit state
+  const [nicknameEditArea, setNicknameEditArea] = useState<string | null>(null);
+  const [nicknameDraft, setNicknameDraft] = useState("");
 
   // Manual pin state: area being pinned → draft input + error
   const [pinningArea, setPinningArea] = useState<string | null>(null);
@@ -684,15 +688,66 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
               }}
             >
               <Tooltip direction="top" offset={[0, -8]}>
-                <strong>{pin.area}</strong>
+                <strong>{areaNicknames[pin.area] || pin.area}</strong>
+                {areaNicknames[pin.area] && (
+                  <span style={{ fontWeight: "normal", opacity: 0.7 }}> ({pin.area})</span>
+                )}
                 {" · "}
                 {pin.people.length}{" "}
                 {pin.people.length === 1 ? "person" : "people"}
               </Tooltip>
               <Popup>
                 <div style={{ minWidth: 200 }}>
-                  <strong style={{ fontSize: 14 }}>{pin.area}</strong>
-                  <div style={{ fontSize: 12, color: "#666", marginBottom: 6, marginTop: 2 }}>
+                  <strong style={{ fontSize: 14 }}>
+                    {areaNicknames[pin.area] || pin.area}
+                  </strong>
+                  {areaNicknames[pin.area] && (
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 1 }}>{pin.area}</div>
+                  )}
+
+                  {/* Nickname editor */}
+                  {nicknameEditArea === pin.area ? (
+                    <div style={{ marginTop: 6, display: "flex", gap: 4, alignItems: "center" }}>
+                      <input
+                        autoFocus
+                        value={nicknameDraft}
+                        onChange={(e) => setNicknameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            updateAreaNickname(pin.area, nicknameDraft);
+                            setNicknameEditArea(null);
+                          } else if (e.key === "Escape") {
+                            setNicknameEditArea(null);
+                          }
+                        }}
+                        placeholder="Area nickname…"
+                        style={{ flex: 1, fontSize: 12, padding: "2px 6px", border: "1px solid #6366f1", borderRadius: 4, outline: "none" }}
+                      />
+                      <button
+                        onClick={() => { updateAreaNickname(pin.area, nicknameDraft); setNicknameEditArea(null); }}
+                        style={{ fontSize: 11, padding: "2px 6px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}
+                      >Save</button>
+                      <button
+                        onClick={() => setNicknameEditArea(null)}
+                        style={{ fontSize: 11, padding: "2px 6px", background: "#e5e7eb", border: "none", borderRadius: 4, cursor: "pointer" }}
+                      >✕</button>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 4, display: "flex", gap: 4 }}>
+                      <button
+                        onClick={() => { setNicknameEditArea(pin.area); setNicknameDraft(areaNicknames[pin.area] || ""); }}
+                        style={{ fontSize: 11, padding: "2px 6px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 4, cursor: "pointer", color: "#374151" }}
+                      >{areaNicknames[pin.area] ? "Edit nickname" : "Add nickname"}</button>
+                      {areaNicknames[pin.area] && (
+                        <button
+                          onClick={() => updateAreaNickname(pin.area, "")}
+                          style={{ fontSize: 11, padding: "2px 6px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: 4, cursor: "pointer", color: "#6b7280" }}
+                        >Clear</button>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 12, color: "#666", marginBottom: 6, marginTop: 8 }}>
                     {pin.people.length}{" "}
                     {pin.people.length === 1 ? "person" : "people"} in your database
                   </div>

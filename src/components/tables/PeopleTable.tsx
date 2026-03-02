@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Person, Activity, Family } from "../../types";
+import { useApp } from "../../context";
 
 interface PeopleTableProps {
   people: Person[];
@@ -33,6 +34,8 @@ export const PeopleTable: React.FC<PeopleTableProps> = ({
   cohortGroups = [],
   cohortColors = [],
 }) => {
+  const { areaNicknames } = useApp();
+
   // Create maps for O(1) lookups instead of O(n) array searches
   const familyMap = useMemo(
     () => new Map<string, Family>(families.map((f) => [f.id, f])),
@@ -100,7 +103,7 @@ export const PeopleTable: React.FC<PeopleTableProps> = ({
                               ))}
                           </div>
                         </td>
-                        <td>{person.area || "-"}</td>
+                        <td title={person.area || undefined}>{areaNicknames[person.area ?? ""] || person.area || "-"}</td>
                         <td>
                           <span className={`chip chip--age-${person.ageGroup}`}>
                             {formatAgeGroup(person.ageGroup)}
