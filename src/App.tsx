@@ -17,6 +17,7 @@ import {
   ConnectionModal,
 } from "./components/modals";
 import { Forms, PublicForms } from "./components/forms";
+import { MapView } from "./components/map";
 import Analytics from "./components/analytics/Analytics";
 import {
   AnalyticsErrorBoundary,
@@ -31,7 +32,7 @@ import { notifyWarning } from "./utils";
 import { FilterState, AdvancedFilterState, Person } from "./types";
 import { exportToCSV } from "./utils";
 import { useFilteredData, useModalState, useComputedViews } from "./hooks";
-import "./styles/index.css";
+import "./styles.css";
 
 const AppContent: React.FC = () => {
   const {
@@ -303,6 +304,8 @@ const AppContent: React.FC = () => {
             <div className="panel__section">
               <Reflections />
             </div>
+          ) : viewMode === "map" ? (
+            <MapView people={filteredPeople} />
           ) : (
             <div className="panel__section">
               <div className="dashboard-layout">

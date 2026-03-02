@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useApp } from "../../context";
 import { getAreaList } from "../../utils";
 import { NetworkVisualization } from "../network";
@@ -16,7 +16,27 @@ export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
     viewMode,
     cohortViewMode,
     showConnections,
+    updatePerson,
+    updateActivity,
   } = useApp();
+
+  const [editingArea, setEditingArea] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  const handleRenameArea = (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) {
+      setEditingArea(null);
+      return;
+    }
+    for (const p of people) {
+      if (p.area?.trim() === oldName) updatePerson(p.id, { area: trimmed });
+    }
+    for (const a of activities) {
+      if (a.area?.trim() === oldName) updateActivity(a.id, { area: trimmed });
+    }
+    setEditingArea(null);
+  };
 
   if (viewMode === "people") {
     const areas = getAreaList(people);
@@ -34,9 +54,48 @@ export const Statistics: React.FC<StatisticsProps> = ({ onAddFamily }) => {
             <p>No areas defined</p>
           ) : (
             areas.map((area) => (
-              <p key={area}>
-                {area}: {areaStats[area]}
-              </p>
+              <div key={area} style={{ marginBottom: "0.35rem" }}>
+                {editingArea === area ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleRenameArea(area, editDraft);
+                    }}
+                    style={{ display: "flex", gap: 4, alignItems: "center" }}
+                  >
+                    <input
+                      autoFocus
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      style={{
+                        flex: 1,
+                        fontSize: 12,
+                        padding: "2px 6px",
+                        border: "1px solid #6366f1",
+                        borderRadius: 4,
+                        outline: "none",
+                      }}
+                    />
+                    <button type="submit" className="btn btn--sm btn--primary" style={{ padding: "2px 7px", fontSize: 11 }}>
+                      Save
+                    </button>
+                    <button type="button" className="btn btn--sm" style={{ padding: "2px 7px", fontSize: 11 }} onClick={() => setEditingArea(null)}>
+                      ✕
+                    </button>
+                  </form>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ flex: 1 }}>{area}: {areaStats[area]}</span>
+                    <button
+                      title="Rename area"
+                      onClick={() => { setEditingArea(area); setEditDraft(area); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "0 2px", color: "#9ca3af", fontSize: 12, lineHeight: 1 }}
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>

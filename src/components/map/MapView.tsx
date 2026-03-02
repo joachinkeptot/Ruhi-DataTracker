@@ -241,6 +241,33 @@ async function fetchACSData(
   }
 }
 
+// ── Coord parsing ──────────────────────────────────────────────────────────────
+
+// Accepts a Google Maps URL or a plain "lat, lng" string.
+// Returns { lat, lng } or null if nothing parseable is found.
+function parseCoordsFromInput(input: string): GeoPoint | null {
+  const text = input.trim();
+
+  // Try patterns from Google Maps URLs
+  // e.g. @39.7294,-104.8319 or @39.7294,-104.8319,15z
+  const atMatch = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+
+  // e.g. ?q=39.7294,-104.8319 or &q=39.7294,-104.8319
+  const qMatch = text.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
+
+  // e.g. ll=39.7294,-104.8319
+  const llMatch = text.match(/ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (llMatch) return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
+
+  // Plain "lat, lng"
+  const plainMatch = text.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+  if (plainMatch) return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]) };
+
+  return null;
+}
+
 // ── Color helpers ──────────────────────────────────────────────────────────────
 
 function peopleColor(count: number): string {
@@ -291,7 +318,16 @@ function FitBounds({
 // ── MapView ────────────────────────────────────────────────────────────────────
 
 export function MapView({ people: filteredPeople }: MapViewProps) {
-  const { people: allPeople, activities } = useApp();
+  const { people: allPeople, activities, updatePerson, updateActivity } = useApp();
+
+  // Inline area rename state: area name being edited → draft value
+  const [editingArea, setEditingArea] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  // Manual pin state: area being pinned → draft input + error
+  const [pinningArea, setPinningArea] = useState<string | null>(null);
+  const [pinDraft, setPinDraft] = useState("");
+  const [pinError, setPinError] = useState("");
 
   const [showActivities, setShowActivities] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -437,6 +473,54 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
     run();
     return () => { aborted = true; };
   }, [peoplePins.length, geoCache]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Manually pin an unresolved area using coords from a Google Maps URL or "lat,lng"
+  const handleManualPin = (area: string, input: string) => {
+    const coords = parseCoordsFromInput(input);
+    if (!coords) {
+      setPinError("Couldn't find coordinates. Paste a Google Maps link or enter lat, lng.");
+      return;
+    }
+    const newGeo = { ...geoCache, [area]: coords };
+    saveGeoCache(newGeo);
+    setGeoCache(newGeo);
+    setPinningArea(null);
+    setPinDraft("");
+    setPinError("");
+  };
+
+  // Rename all people + activities in an area, then re-geocode the new name
+  const handleRenameArea = (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) {
+      setEditingArea(null);
+      return;
+    }
+    // Update every person in that area
+    for (const p of allPeople) {
+      if (p.area?.trim() === oldName) {
+        updatePerson(p.id, { area: trimmed });
+      }
+    }
+    // Update every activity in that area
+    for (const a of activities) {
+      if (a.area?.trim() === oldName) {
+        updateActivity(a.id, { area: trimmed });
+      }
+    }
+    // Move geo/census cache entries to the new name, drop the old key
+    const newGeo = { ...geoCache, [trimmed]: geoCache[oldName] ?? null };
+    delete newGeo[oldName];
+    saveGeoCache(newGeo);
+    setGeoCache(newGeo);
+
+    const newCensus = { ...censusCache, [trimmed]: censusCache[oldName] ?? null };
+    delete newCensus[oldName];
+    saveCensusCache(newCensus);
+    setCensusCache(newCensus);
+
+    setEditingArea(null);
+  };
 
   // Refresh: clear cache and re-geocode everything
   const handleRefresh = () => {
@@ -961,40 +1045,98 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
               {[...peoplePins]
                 .sort((a, b) => b.people.length - a.people.length)
                 .map((pin) => (
-                  <div
-                    key={pin.area}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "3px 0",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: "#374151",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        maxWidth: 190,
-                      }}
-                    >
-                      {pin.area}
-                    </span>
-                    <span
-                      style={{
-                        background: peopleColor(pin.people.length),
-                        color: "#fff",
-                        borderRadius: 10,
-                        padding: "1px 7px",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        flexShrink: 0,
-                        marginLeft: 6,
-                      }}
-                    >
-                      {pin.people.length}
-                    </span>
+                  <div key={pin.area}>
+                    {editingArea === pin.area ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleRenameArea(pin.area, editDraft);
+                        }}
+                        style={{ display: "flex", gap: 4, alignItems: "center" }}
+                      >
+                        <input
+                          autoFocus
+                          value={editDraft}
+                          onChange={(e) => setEditDraft(e.target.value)}
+                          style={{
+                            flex: 1,
+                            fontSize: 12,
+                            padding: "2px 6px",
+                            border: "1px solid #6366f1",
+                            borderRadius: 4,
+                            outline: "none",
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          className="btn btn--sm btn--primary"
+                          style={{ padding: "2px 7px", fontSize: 11 }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--sm"
+                          style={{ padding: "2px 7px", fontSize: 11 }}
+                          onClick={() => setEditingArea(null)}
+                        >
+                          ✕
+                        </button>
+                      </form>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "3px 0",
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: "#374151",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            maxWidth: 160,
+                          }}
+                        >
+                          {pin.area}
+                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0, marginLeft: 4 }}>
+                          <button
+                            title="Rename area"
+                            onClick={() => {
+                              setEditingArea(pin.area);
+                              setEditDraft(pin.area);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "0 2px",
+                              color: "#9ca3af",
+                              fontSize: 12,
+                              lineHeight: 1,
+                            }}
+                          >
+                            ✏️
+                          </button>
+                          <span
+                            style={{
+                              background: peopleColor(pin.people.length),
+                              color: "#fff",
+                              borderRadius: 10,
+                              padding: "1px 7px",
+                              fontSize: 11,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {pin.people.length}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
             </div>
@@ -1019,21 +1161,54 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                 (not found on map)
               </span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {unresolvedAreas.map((area) => (
                 <div key={area}>
-                  <div style={{ color: "#9ca3af", fontStyle: "italic" }}>
+                  <div style={{ color: "#9ca3af", fontStyle: "italic", marginBottom: 2 }}>
                     {area}
                   </div>
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      paddingLeft: 8,
-                      fontSize: 12,
-                    }}
-                  >
+                  <div style={{ color: "#6b7280", paddingLeft: 8, fontSize: 12, marginBottom: 4 }}>
                     {filteredAreaPeopleMap[area].join(", ")}
                   </div>
+                  {pinningArea === area ? (
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); handleManualPin(area, pinDraft); }}
+                      style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 8 }}
+                    >
+                      <input
+                        autoFocus
+                        value={pinDraft}
+                        onChange={(e) => { setPinDraft(e.target.value); setPinError(""); }}
+                        placeholder="Paste Google Maps link or lat, lng"
+                        style={{
+                          fontSize: 11,
+                          padding: "3px 6px",
+                          border: `1px solid ${pinError ? "#ef4444" : "#6366f1"}`,
+                          borderRadius: 4,
+                          outline: "none",
+                        }}
+                      />
+                      {pinError && (
+                        <div style={{ fontSize: 10, color: "#ef4444" }}>{pinError}</div>
+                      )}
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button type="submit" className="btn btn--sm btn--primary" style={{ padding: "2px 7px", fontSize: 11 }}>
+                          Pin
+                        </button>
+                        <button type="button" className="btn btn--sm" style={{ padding: "2px 7px", fontSize: 11 }} onClick={() => { setPinningArea(null); setPinDraft(""); setPinError(""); }}>
+                          ✕
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      className="btn btn--sm"
+                      style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px" }}
+                      onClick={() => { setPinningArea(area); setPinDraft(""); setPinError(""); }}
+                    >
+                      Set location
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

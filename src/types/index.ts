@@ -230,7 +230,8 @@ export type ViewMode =
   | "analytics"
   | "forms"
   | "programs"
-  | "reflections";
+  | "reflections"
+  | "map";
 
 // ============================================================================
 // PROGRAMS — Children's Festivals, JY Intensives, Study Circles

@@ -103,6 +103,13 @@ export const Header: React.FC<HeaderProps> = ({
         >
           Reflections
         </button>
+        <button
+          className={`tab ${viewMode === "map" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("map")}
+          role="tab"
+        >
+          Map
+        </button>
       </div>
       <div className="board__actions">
         {viewMode === "cohorts" && (
