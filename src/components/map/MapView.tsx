@@ -105,7 +105,7 @@ function saveGeoCache(cache: GeoCache) {
   }
 }
 
-const CENSUS_CACHE_KEY = "roommap_census_cache_v2";
+const CENSUS_CACHE_KEY = "roommap_census_cache_v3";
 
 function loadCensusCache(): CensusCache {
   try {
@@ -135,12 +135,15 @@ async function fetchCensusTract(
     const url =
       `https://geocoding.geo.census.gov/geocoder/geographies/coordinates` +
       `?x=${lng}&y=${lat}` +
-      `&benchmark=Public_AR_Census2020` +
-      `&vintage=Census2020_Census2020` +
-      `&layers=10&format=json`;
+      `&benchmark=Public_AR_Current` +
+      `&vintage=Current_Current` +
+      `&format=json`;
     const res = await fetch(url);
     const json = await res.json();
-    const tracts: any[] = json?.result?.geographies?.["Census Tracts"] ?? [];
+    const geos = json?.result?.geographies ?? {};
+    // Key name differs by vintage: "Census Tracts" (Current) or "2020 Census Tracts" (Census2020)
+    const tracts: any[] =
+      geos["Census Tracts"] ?? geos["2020 Census Tracts"] ?? [];
     if (tracts.length === 0) return null;
     const t = tracts[0];
     return { state: t.STATE, county: t.COUNTY, tract: t.TRACT };
