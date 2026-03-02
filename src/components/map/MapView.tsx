@@ -997,6 +997,7 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
           flexDirection: "column",
           gap: 16,
           fontSize: 13,
+          color: "var(--text)",
         }}
       >
         {/* Title */}
@@ -1013,18 +1014,18 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
 
         {/* Stats */}
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ color: "#374151" }}>
+          <div style={{ color: "var(--text)" }}>
             <span style={{ fontWeight: 600 }}>{totalOnMap}</span> of{" "}
             <span style={{ fontWeight: 600 }}>{totalFiltered}</span>{" "}
             {isFiltered ? "filtered " : ""}
             people on map
           </div>
           {isFiltered && (
-            <div style={{ fontSize: 11, color: "#9ca3af" }}>
+            <div style={{ fontSize: 11, color: "var(--muted, #64748b)" }}>
               {totalAll} total in database
             </div>
           )}
-          <div style={{ color: "#374151" }}>
+          <div style={{ color: "var(--text)" }}>
             <span style={{ fontWeight: 600 }}>{peoplePins.length}</span> area
             {peoplePins.length !== 1 ? "s" : ""} located
           </div>
@@ -1042,22 +1043,22 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
               gap: 6,
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: 12, color: "#374151", marginBottom: 2 }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)", marginBottom: 2 }}>
               Community snapshot
             </div>
             {ageGroupCounts.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>Age groups</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>Age groups</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
                   {ageGroupCounts.map(([group, count]) => (
                     <span
                       key={group}
                       style={{
-                        background: "#e5e7eb",
+                        background: "rgba(255,255,255,0.08)",
                         borderRadius: 10,
                         padding: "1px 7px",
                         fontSize: 11,
-                        color: "#374151",
+                        color: "var(--text)",
                         fontWeight: 500,
                       }}
                     >
@@ -1067,22 +1068,22 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                 </div>
               </div>
             )}
-            <div style={{ fontSize: 11, color: "#6b7280" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)" }}>
               Home visits:{" "}
-              <strong style={{ color: "#374151" }}>
+              <strong style={{ color: "var(--text)" }}>
                 {homeVisitCoverage.withVisits}/{homeVisitCoverage.total}
               </strong>{" "}
               people
               {homeVisitCoverage.total > 0 && (
-                <span style={{ color: "#9ca3af" }}>
+                <span style={{ color: "var(--muted, #64748b)" }}>
                   {" "}({Math.round((homeVisitCoverage.withVisits / homeVisitCoverage.total) * 100)}%)
                 </span>
               )}
             </div>
             {visibleAreaActivityCount > 0 && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Activities in view:{" "}
-                <strong style={{ color: "#374151" }}>{visibleAreaActivityCount}</strong>
+                <strong style={{ color: "var(--text)" }}>{visibleAreaActivityCount}</strong>
               </div>
             )}
           </div>
@@ -1100,75 +1101,75 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
               gap: 5,
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: 12, color: "#374151", marginBottom: 2 }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)", marginBottom: 2 }}>
               Neighborhood overview
-              <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>
+              <span style={{ fontWeight: 400, color: "var(--muted, #64748b)", marginLeft: 6 }}>
                 ({neighborhoodOverview.areas} tract{neighborhoodOverview.areas !== 1 ? "s" : ""})
               </span>
             </div>
-            <div style={{ fontSize: 11, color: "#6b7280" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)" }}>
               Total tract pop:{" "}
-              <strong style={{ color: "#374151" }}>{neighborhoodOverview.totalPop.toLocaleString()}</strong>
+              <strong style={{ color: "var(--text)" }}>{neighborhoodOverview.totalPop.toLocaleString()}</strong>
             </div>
             {neighborhoodOverview.medianIncome !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Median income:{" "}
-                <strong style={{ color: "#374151" }}>${Math.round(neighborhoodOverview.medianIncome).toLocaleString()}</strong>
+                <strong style={{ color: "var(--text)" }}>${Math.round(neighborhoodOverview.medianIncome).toLocaleString()}</strong>
               </div>
             )}
             {neighborhoodOverview.medianRent !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Median rent:{" "}
-                <strong style={{ color: "#374151" }}>${Math.round(neighborhoodOverview.medianRent).toLocaleString()}/mo</strong>
+                <strong style={{ color: "var(--text)" }}>${Math.round(neighborhoodOverview.medianRent).toLocaleString()}/mo</strong>
               </div>
             )}
             {neighborhoodOverview.povertyRate !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Poverty rate:{" "}
-                <strong style={{ color: "#374151" }}>{neighborhoodOverview.povertyRate}%</strong>
+                <strong style={{ color: "var(--text)" }}>{neighborhoodOverview.povertyRate}%</strong>
               </div>
             )}
             {neighborhoodOverview.hispanicPct !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Hispanic / Latino:{" "}
-                <strong style={{ color: "#374151" }}>{neighborhoodOverview.hispanicPct}%</strong>
+                <strong style={{ color: "var(--text)" }}>{neighborhoodOverview.hispanicPct}%</strong>
               </div>
             )}
             {neighborhoodOverview.foreignBornPct !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Foreign born:{" "}
-                <strong style={{ color: "#374151" }}>{neighborhoodOverview.foreignBornPct}%</strong>
+                <strong style={{ color: "var(--text)" }}>{neighborhoodOverview.foreignBornPct}%</strong>
               </div>
             )}
             {neighborhoodOverview.spanishSpeakingPct !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Spanish-speaking:{" "}
-                <strong style={{ color: "#374151" }}>{neighborhoodOverview.spanishSpeakingPct}%</strong>
+                <strong style={{ color: "var(--text)" }}>{neighborhoodOverview.spanishSpeakingPct}%</strong>
               </div>
             )}
             {neighborhoodOverview.under18Pct !== null && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
                 Under 18:{" "}
-                <strong style={{ color: "#374151" }}>{neighborhoodOverview.under18Pct}%</strong>
+                <strong style={{ color: "var(--text)" }}>{neighborhoodOverview.under18Pct}%</strong>
               </div>
             )}
             {neighborhoodOverview.topRaces.length > 0 && (
               <div style={{ marginTop: 3 }}>
-                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 3 }}>Race breakdown:</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 3 }}>Race breakdown:</div>
                 {neighborhoodOverview.topRaces.map(({ label, pct }) => (
                   <div key={label} style={{ marginBottom: 3 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#374151" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text)" }}>
                       <span>{label}</span>
                       <span style={{ fontWeight: 600 }}>{pct}%</span>
                     </div>
-                    <div style={{ background: "#e5e7eb", borderRadius: 3, height: 3, marginTop: 1 }}>
+                    <div style={{ background: "var(--border)", borderRadius: 3, height: 3, marginTop: 1 }}>
                       <div style={{ background: "#6366f1", borderRadius: 3, height: 3, width: `${pct}%`, transition: "width 0.3s" }} />
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <div style={{ fontSize: 9, color: "#9ca3af", marginTop: 2 }}>
+            <div style={{ fontSize: 9, color: "var(--muted, #64748b)", marginTop: 2 }}>
               ACS 5-yr estimates (2019–2023) · weighted avg
             </div>
           </div>
@@ -1197,7 +1198,7 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
             onChange={(e) => setShowActivities(e.target.checked)}
             style={{ accentColor: ACTIVITY_COLOR }}
           />
-          <span style={{ color: showActivities ? ACTIVITY_COLOR : "#374151", fontWeight: 500 }}>
+          <span style={{ color: showActivities ? ACTIVITY_COLOR : "var(--text)", fontWeight: 500 }}>
             Show activity pins
           </span>
         </label>
@@ -1206,11 +1207,11 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
         {geocodingStatus === "loading" && (
           <div
             style={{
-              background: "#eff6ff",
+              background: "rgba(99,102,241,0.1)",
               border: "1px solid #bfdbfe",
               borderRadius: 7,
               padding: "8px 10px",
-              color: "#1d4ed8",
+              color: "var(--accent)",
               fontSize: 12,
             }}
           >
@@ -1222,11 +1223,11 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
         {censusStatus === "loading" && geocodingStatus === "done" && (
           <div
             style={{
-              background: "#f5f3ff",
+              background: "rgba(99,102,241,0.1)",
               border: "1px solid #ddd6fe",
               borderRadius: 7,
               padding: "8px 10px",
-              color: "#5b21b6",
+              color: "var(--accent)",
               fontSize: 12,
             }}
           >
@@ -1247,7 +1248,7 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
         {peoplePins.length > 0 && (
           <div>
             <div
-              style={{ fontWeight: 600, marginBottom: 8, color: "#374151" }}
+              style={{ fontWeight: 600, marginBottom: 8, color: "var(--text)" }}
             >
               Mapped areas
             </div>
@@ -1304,7 +1305,7 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                       >
                         <span
                           style={{
-                            color: "#374151",
+                            color: "var(--text)",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -1325,7 +1326,7 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
                               border: "none",
                               cursor: "pointer",
                               padding: "0 2px",
-                              color: "#9ca3af",
+                              color: "var(--muted, #64748b)",
                               fontSize: 12,
                               lineHeight: 1,
                             }}
@@ -1360,24 +1361,24 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
               style={{
                 fontWeight: 600,
                 marginBottom: 6,
-                color: "#374151",
+                color: "var(--text)",
                 display: "flex",
                 alignItems: "baseline",
                 gap: 6,
               }}
             >
               Unresolved
-              <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 11 }}>
+              <span style={{ fontWeight: 400, color: "var(--muted, #64748b)", fontSize: 11 }}>
                 (not found on map)
               </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {unresolvedAreas.map((area) => (
                 <div key={area}>
-                  <div style={{ color: "#9ca3af", fontStyle: "italic", marginBottom: 2 }}>
+                  <div style={{ color: "var(--muted, #64748b)", fontStyle: "italic", marginBottom: 2 }}>
                     {area}
                   </div>
-                  <div style={{ color: "#6b7280", paddingLeft: 8, fontSize: 12, marginBottom: 4 }}>
+                  <div style={{ color: "var(--muted)", paddingLeft: 8, fontSize: 12, marginBottom: 4 }}>
                     {filteredAreaPeopleMap[area].join(", ")}
                   </div>
                   {pinningArea === area ? (
@@ -1431,7 +1432,7 @@ export function MapView({ people: filteredPeople }: MapViewProps) {
           unresolvedAreas.length === 0 && (
             <div
               style={{
-                color: "#9ca3af",
+                color: "var(--muted, #64748b)",
                 textAlign: "center",
                 marginTop: 40,
                 lineHeight: 1.6,
