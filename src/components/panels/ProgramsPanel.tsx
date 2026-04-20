@@ -5,6 +5,7 @@ import {
   ProgramStatus,
   ProgramNote,
   LearningObjectStatus,
+  ProgramEvent,
 } from "../../types";
 import { ProgramEventModal } from "../modals/ProgramEventModal";
 import { generateId } from "../../utils";
@@ -18,7 +19,7 @@ const isProgramKind = (tab: ActiveTab): tab is ProgramKind => {
 const KINDS: { kind: ProgramKind; label: string; icon: string }[] = [
   { kind: "children-festival", label: "Children's Festivals", icon: "🎉" },
   { kind: "jy-intensive", label: "JY Intensives", icon: "⚡" },
-  { kind: "study-circle", label: "Study Circles", icon: "📚" },
+  { kind: "study-circle", label: "Study Circle Intensives", icon: "📚" },
 ];
 
 const STATUS_COLORS: Record<ProgramStatus, string> = {
@@ -70,6 +71,13 @@ export const ProgramsPanel: React.FC = () => {
               new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
           )
       : [];
+
+  const inProgressEvents = eventsForKind.filter(
+    (e) => e.status === "planned" || e.status === "ongoing",
+  );
+  const completedEvents = eventsForKind.filter(
+    (e) => e.status === "completed" || e.status === "cancelled",
+  );
 
   const sortedLearningObjects = [...learningObjects].sort(
     (a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
@@ -153,6 +161,303 @@ export const ProgramsPanel: React.FC = () => {
   };
 
   const currentKindLabel = KINDS.find((k) => k.kind === activeTab)?.label ?? "";
+
+  const renderEventCard = (
+    event: ProgramEvent,
+    isExpanded: boolean,
+    isDeleteConfirm: boolean,
+  ) => (
+    <div
+      key={event.id}
+      className="panel__section"
+      style={{ padding: 0, overflow: "hidden" }}
+    >
+      {/* Card header */}
+      <div
+        style={{
+          padding: "0.875rem 1rem",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.75rem",
+        }}
+        onClick={() => setExpandedId(isExpanded ? null : event.id)}
+      >
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <strong style={{ fontSize: "1rem" }}>
+              {event.title}
+            </strong>
+            <span
+              style={{
+                background: STATUS_COLORS[event.status],
+                color: "white",
+                borderRadius: "999px",
+                padding: "0.15rem 0.55rem",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "capitalize",
+              }}
+            >
+              {event.status}
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "1rem",
+              marginTop: "0.35rem",
+              flexWrap: "wrap",
+              fontSize: "0.82rem",
+              color: "var(--text-muted, #6b7280)",
+            }}
+          >
+            <span>
+              📅{" "}
+              {event.endDate && event.endDate !== event.date
+                ? `${formatDate(event.date)} – ${formatDate(event.endDate)}`
+                : formatDate(event.date)}
+            </span>
+            {event.location && <span>📍 {event.location}</span>}
+            {event.team.length > 0 && (
+              <span>
+                👥{" "}
+                {event.team
+                  .map(
+                    (m) =>
+                      `${m.name}${m.role ? ` (${m.role})` : ""}`,
+                  )
+                  .join(", ")}
+              </span>
+            )}
+            {event.trackingNotes.length > 0 && (
+              <span>
+                🗒 {event.trackingNotes.length} note
+                {event.trackingNotes.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "0.4rem",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="btn btn--sm"
+            onClick={() => handleOpenEdit(event.id)}
+          >
+            Edit
+          </button>
+          {isDeleteConfirm ? (
+            <>
+              <button
+                className="btn btn--sm btn--danger"
+                onClick={() => {
+                  deleteProgramEvent(event.id);
+                  setDeleteConfirmId(null);
+                  if (expandedId === event.id) setExpandedId(null);
+                }}
+              >
+                Confirm
+              </button>
+              <button
+                className="btn btn--sm"
+                onClick={() => setDeleteConfirmId(null)}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn btn--sm"
+              onClick={() => setDeleteConfirmId(event.id)}
+              style={{ color: "#ef4444" }}
+            >
+              Delete
+            </button>
+          )}
+          <span style={{ color: "var(--text-muted, #9ca3af)" }}>
+            {isExpanded ? "▲" : "▼"}
+          </span>
+        </div>
+      </div>
+
+      {/* Expanded body */}
+      {isExpanded && (
+        <div
+          style={{
+            borderTop: "1px solid var(--border, #e5e7eb)",
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "1.25rem",
+            }}
+          >
+            <div>
+              <h4
+                style={{
+                  margin: "0 0 0.5rem",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Reflections
+              </h4>
+              <ReflectionsEditor
+                value={event.reflections}
+                onSave={(text) =>
+                  handleSaveReflections(event.id, text)
+                }
+              />
+            </div>
+
+            <div>
+              <h4
+                style={{
+                  margin: "0 0 0.5rem",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Tracking Notes
+              </h4>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.4rem",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="Add a note..."
+                  value={newNoteText[event.id] ?? ""}
+                  onChange={(e) =>
+                    setNewNoteText((prev) => ({
+                      ...prev,
+                      [event.id]: e.target.value,
+                    }))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddNote(event.id);
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="btn btn--sm btn--primary"
+                  onClick={() => handleAddNote(event.id)}
+                  disabled={!(newNoteText[event.id] ?? "").trim()}
+                >
+                  Add
+                </button>
+              </div>
+
+              {event.trackingNotes.length === 0 && (
+                <p
+                  className="muted"
+                  style={{ fontSize: "0.82rem" }}
+                >
+                  No notes yet — type above to log something.
+                </p>
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.4rem",
+                  maxHeight: "260px",
+                  overflowY: "auto",
+                }}
+              >
+                {event.trackingNotes
+                  .slice()
+                  .reverse()
+                  .map((note) => (
+                    <div
+                      key={note.id}
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "flex-start",
+                        padding: "0.4rem 0.5rem",
+                        borderRadius: "6px",
+                        background:
+                          "var(--bg-subtle, rgba(0,0,0,0.04))",
+                      }}
+                    >
+                      <span
+                        className="muted"
+                        style={{
+                          fontSize: "0.72rem",
+                          whiteSpace: "nowrap",
+                          paddingTop: "2px",
+                        }}
+                      >
+                        {formatNoteDate(note.date)}
+                      </span>
+                      <span
+                        style={{ flex: 1, fontSize: "0.85rem" }}
+                      >
+                        {note.text}
+                      </span>
+                      <button
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#9ca3af",
+                          fontSize: "0.75rem",
+                          padding: "0 2px",
+                          lineHeight: 1,
+                          flexShrink: 0,
+                        }}
+                        onClick={() =>
+                          handleDeleteNote(event.id, note.id)
+                        }
+                        title="Remove note"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          <p
+            className="muted"
+            style={{
+              fontSize: "0.72rem",
+              marginTop: "0.75rem",
+            }}
+          >
+            Added {formatDate(event.dateAdded)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ padding: "1rem", maxWidth: "860px", margin: "0 auto" }}>
@@ -254,306 +559,34 @@ export const ProgramsPanel: React.FC = () => {
           )}
 
           {/* Event cards */}
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-          >
-            {eventsForKind.map((event) => {
-              const isExpanded = expandedId === event.id;
-              const isDeleteConfirm = deleteConfirmId === event.id;
-
-              return (
-                <div
-                  key={event.id}
-                  className="panel__section"
-                  style={{ padding: 0, overflow: "hidden" }}
-                >
-                  {/* Card header */}
-                  <div
-                    style={{
-                      padding: "0.875rem 1rem",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "0.75rem",
-                    }}
-                    onClick={() => setExpandedId(isExpanded ? null : event.id)}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <strong style={{ fontSize: "1rem" }}>
-                          {event.title}
-                        </strong>
-                        <span
-                          style={{
-                            background: STATUS_COLORS[event.status],
-                            color: "white",
-                            borderRadius: "999px",
-                            padding: "0.15rem 0.55rem",
-                            fontSize: "0.7rem",
-                            fontWeight: 600,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {event.status}
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "1rem",
-                          marginTop: "0.35rem",
-                          flexWrap: "wrap",
-                          fontSize: "0.82rem",
-                          color: "var(--text-muted, #6b7280)",
-                        }}
-                      >
-                        <span>
-                          📅{" "}
-                          {event.endDate && event.endDate !== event.date
-                            ? `${formatDate(event.date)} – ${formatDate(event.endDate)}`
-                            : formatDate(event.date)}
-                        </span>
-                        {event.location && <span>📍 {event.location}</span>}
-                        {event.team.length > 0 && (
-                          <span>
-                            👥{" "}
-                            {event.team
-                              .map(
-                                (m) =>
-                                  `${m.name}${m.role ? ` (${m.role})` : ""}`,
-                              )
-                              .join(", ")}
-                          </span>
-                        )}
-                        {event.trackingNotes.length > 0 && (
-                          <span>
-                            🗒 {event.trackingNotes.length} note
-                            {event.trackingNotes.length !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.4rem",
-                        alignItems: "center",
-                        flexShrink: 0,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        className="btn btn--sm"
-                        onClick={() => handleOpenEdit(event.id)}
-                      >
-                        Edit
-                      </button>
-                      {isDeleteConfirm ? (
-                        <>
-                          <button
-                            className="btn btn--sm btn--danger"
-                            onClick={() => {
-                              deleteProgramEvent(event.id);
-                              setDeleteConfirmId(null);
-                              if (expandedId === event.id) setExpandedId(null);
-                            }}
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            className="btn btn--sm"
-                            onClick={() => setDeleteConfirmId(null)}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          className="btn btn--sm"
-                          onClick={() => setDeleteConfirmId(event.id)}
-                          style={{ color: "#ef4444" }}
-                        >
-                          Delete
-                        </button>
-                      )}
-                      <span style={{ color: "var(--text-muted, #9ca3af)" }}>
-                        {isExpanded ? "▲" : "▼"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Expanded body */}
-                  {isExpanded && (
-                    <div
-                      style={{
-                        borderTop: "1px solid var(--border, #e5e7eb)",
-                        padding: "1rem",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: "1.25rem",
-                        }}
-                      >
-                        <div>
-                          <h4
-                            style={{
-                              margin: "0 0 0.5rem",
-                              fontSize: "0.9rem",
-                            }}
-                          >
-                            Reflections
-                          </h4>
-                          <ReflectionsEditor
-                            value={event.reflections}
-                            onSave={(text) =>
-                              handleSaveReflections(event.id, text)
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <h4
-                            style={{
-                              margin: "0 0 0.5rem",
-                              fontSize: "0.9rem",
-                            }}
-                          >
-                            Tracking Notes
-                          </h4>
-
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "0.4rem",
-                              marginBottom: "0.75rem",
-                            }}
-                          >
-                            <input
-                              type="text"
-                              placeholder="Add a note..."
-                              value={newNoteText[event.id] ?? ""}
-                              onChange={(e) =>
-                                setNewNoteText((prev) => ({
-                                  ...prev,
-                                  [event.id]: e.target.value,
-                                }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleAddNote(event.id);
-                                }
-                              }}
-                              style={{ flex: 1 }}
-                            />
-                            <button
-                              className="btn btn--sm btn--primary"
-                              onClick={() => handleAddNote(event.id)}
-                              disabled={!(newNoteText[event.id] ?? "").trim()}
-                            >
-                              Add
-                            </button>
-                          </div>
-
-                          {event.trackingNotes.length === 0 && (
-                            <p
-                              className="muted"
-                              style={{ fontSize: "0.82rem" }}
-                            >
-                              No notes yet — type above to log something.
-                            </p>
-                          )}
-
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "0.4rem",
-                              maxHeight: "260px",
-                              overflowY: "auto",
-                            }}
-                          >
-                            {event.trackingNotes
-                              .slice()
-                              .reverse()
-                              .map((note) => (
-                                <div
-                                  key={note.id}
-                                  style={{
-                                    display: "flex",
-                                    gap: "0.5rem",
-                                    alignItems: "flex-start",
-                                    padding: "0.4rem 0.5rem",
-                                    borderRadius: "6px",
-                                    background:
-                                      "var(--bg-subtle, rgba(0,0,0,0.04))",
-                                  }}
-                                >
-                                  <span
-                                    className="muted"
-                                    style={{
-                                      fontSize: "0.72rem",
-                                      whiteSpace: "nowrap",
-                                      paddingTop: "2px",
-                                    }}
-                                  >
-                                    {formatNoteDate(note.date)}
-                                  </span>
-                                  <span
-                                    style={{ flex: 1, fontSize: "0.85rem" }}
-                                  >
-                                    {note.text}
-                                  </span>
-                                  <button
-                                    style={{
-                                      background: "none",
-                                      border: "none",
-                                      cursor: "pointer",
-                                      color: "#9ca3af",
-                                      fontSize: "0.75rem",
-                                      padding: "0 2px",
-                                      lineHeight: 1,
-                                      flexShrink: 0,
-                                    }}
-                                    onClick={() =>
-                                      handleDeleteNote(event.id, note.id)
-                                    }
-                                    title="Remove note"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p
-                        className="muted"
-                        style={{
-                          fontSize: "0.72rem",
-                          marginTop: "0.75rem",
-                        }}
-                      >
-                        Added {formatDate(event.dateAdded)}
-                      </p>
-                    </div>
+          <div>
+            {/* In Progress */}
+            {inProgressEvents.length > 0 && (
+              <div style={{ marginBottom: "1.25rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                  In Progress ({inProgressEvents.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {inProgressEvents.map((event) =>
+                    renderEventCard(event, expandedId === event.id, deleteConfirmId === event.id)
                   )}
                 </div>
-              );
-            })}
+              </div>
+            )}
+
+            {/* Completed / Cancelled */}
+            {completedEvents.length > 0 && (
+              <div>
+                <div style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: "0.5rem", marginTop: inProgressEvents.length > 0 ? "1rem" : 0 }}>
+                  Completed / Cancelled ({completedEvents.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", opacity: 0.7 }}>
+                  {completedEvents.map((event) =>
+                    renderEventCard(event, expandedId === event.id, deleteConfirmId === event.id)
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Modal */}
@@ -613,12 +646,10 @@ const ObjectsOfLearningTab: React.FC<ObjTabProps> = ({
   formatDate,
   statusColors,
 }) => {
-  const activeCount = learningObjects.filter(
-    (o) => o.status === "active",
-  ).length;
-  const completedCount = learningObjects.filter(
-    (o) => o.status === "completed",
-  ).length;
+  const activeObjects = learningObjects.filter((o) => o.status === "active");
+  const completedObjects = learningObjects.filter((o) => o.status === "completed");
+  const activeCount = activeObjects.length;
+  const completedCount = completedObjects.length;
 
   return (
     <div>
@@ -713,8 +744,8 @@ const ObjectsOfLearningTab: React.FC<ObjTabProps> = ({
       )}
 
       {/* Statement list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {learningObjects.map((obj) => {
+      {(() => {
+        const renderObjCard = (obj: (typeof learningObjects)[number]) => {
           const isExpanded = expandedObjId === obj.id;
           const isCompleted = obj.status === "completed";
           const isDeleteConfirm = deleteObjConfirmId === obj.id;
@@ -727,7 +758,6 @@ const ObjectsOfLearningTab: React.FC<ObjTabProps> = ({
               style={{
                 padding: 0,
                 overflow: "hidden",
-                opacity: isCompleted ? 0.7 : 1,
               }}
             >
               {/* Row */}
@@ -892,8 +922,36 @@ const ObjectsOfLearningTab: React.FC<ObjTabProps> = ({
               )}
             </div>
           );
-        })}
-      </div>
+        };
+
+        return (
+          <div>
+            {/* In Progress */}
+            {activeObjects.length > 0 && (
+              <div style={{ marginBottom: "1.25rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                  In Progress ({activeObjects.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {activeObjects.map(renderObjCard)}
+                </div>
+              </div>
+            )}
+
+            {/* Completed */}
+            {completedObjects.length > 0 && (
+              <div>
+                <div style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: "0.5rem", marginTop: activeObjects.length > 0 ? "1rem" : 0 }}>
+                  Completed ({completedObjects.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", opacity: 0.7 }}>
+                  {completedObjects.map(renderObjCard)}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };
