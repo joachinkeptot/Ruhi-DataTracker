@@ -3,8 +3,6 @@ import { useApp } from "../../context";
 import {
   FormSubmission,
   FormType,
-  HomeVisit,
-  VisitPurpose,
   AgeGroup,
   EmploymentStatus,
 } from "../../types";
@@ -17,7 +15,7 @@ import {
 } from "../../utils";
 
 export const Forms: React.FC = () => {
-  const { people, addPerson, updatePerson } = useApp();
+  const { addPerson } = useApp();
 
   // Form submissions stored in localStorage
   const [submissions, setSubmissions] = useState<FormSubmission[]>(() => {
@@ -42,17 +40,6 @@ export const Forms: React.FC = () => {
   const [personNotes, setPersonNotes] = useState("");
   const [personEmployment, setPersonEmployment] =
     useState<EmploymentStatus>("employed");
-
-  // Home Visit Form State
-  const [visitPerson, setVisitPerson] = useState("");
-  const [visitDate, setVisitDate] = useState("");
-  const [visitors, setVisitors] = useState("");
-  const [purpose, setPurpose] = useState<VisitPurpose>("Social");
-  const [visitNotes, setVisitNotes] = useState("");
-  const [relationshipsDiscovered, setRelationshipsDiscovered] = useState("");
-  const [interestsExpressed, setInterestsExpressed] = useState("");
-  const [followUp, setFollowUp] = useState("");
-  const [followUpDate, setFollowUpDate] = useState("");
 
   const saveSubmissions = (subs: FormSubmission[]) => {
     try {
@@ -142,95 +129,6 @@ export const Forms: React.FC = () => {
     }
   };
 
-  const handleHomeVisitSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate required fields
-    if (!validateRequired(submitterName)) {
-      notifyWarning("Please enter your name before submitting");
-      return;
-    }
-    if (!visitPerson) {
-      notifyWarning("Please select a person for the visit");
-      return;
-    }
-    if (!validateRequired(visitDate)) {
-      notifyWarning("Visit date is required");
-      return;
-    }
-    if (!validateRequired(visitors)) {
-      notifyWarning("Please enter who made the visit");
-      return;
-    }
-
-    const person = people.find((p) => p.id === visitPerson);
-    if (!person) {
-      notifyError("Selected person not found in database");
-      return;
-    }
-
-    const submission: FormSubmission = {
-      id: `form-${Date.now()}`,
-      formType: "homevisit",
-      submittedBy: submitterName.trim(),
-      submittedAt: new Date().toISOString(),
-      data: {
-        personId: visitPerson,
-        personName: person.name,
-        date: visitDate,
-        visitors: visitors.trim(),
-        purpose: purpose,
-        notes: visitNotes.trim() || undefined,
-        relationshipsDiscovered: relationshipsDiscovered.trim() || undefined,
-        interestsExpressed: interestsExpressed.trim() || undefined,
-        followUp: followUp.trim() || undefined,
-        followUpDate: followUpDate || undefined,
-      },
-      processed: false,
-    };
-
-    saveSubmissions([...submissions, submission]);
-
-    // Auto-process: Add the home visit immediately
-    try {
-      const newVisit: HomeVisit = {
-        date: visitDate,
-        visitors: visitors.split(",").map((v) => v.trim()),
-        purpose: purpose,
-        notes: visitNotes,
-        relationshipsDiscovered: relationshipsDiscovered,
-        interestsExpressed: interestsExpressed,
-        followUp: followUp,
-        followUpDate: followUpDate,
-        completed: false,
-      };
-
-      const updatedPerson = {
-        ...person,
-        homeVisits: [...(person.homeVisits || []), newVisit],
-        lastContact: visitDate,
-        lastModified: new Date().toISOString(),
-      };
-
-      updatePerson(person.id, updatedPerson);
-
-      // Mark as processed
-      submission.processed = true;
-      submission.processedAt = new Date().toISOString();
-      saveSubmissions([...submissions, submission]);
-
-      notifySuccess("Home visit recorded successfully!", 3000);
-      resetHomeVisitForm();
-      setActiveFormType(null);
-    } catch (error) {
-      notifyError(
-        "Error recording home visit. Please try again.",
-        error instanceof Error ? error : undefined,
-      );
-      // Keep form open so user can retry
-    }
-  };
-
   const resetPersonForm = () => {
     setPersonName("");
     setPersonArea("");
@@ -239,18 +137,6 @@ export const Forms: React.FC = () => {
     setPersonEmail("");
     setPersonNotes("");
     setPersonEmployment("employed");
-  };
-
-  const resetHomeVisitForm = () => {
-    setVisitPerson("");
-    setVisitDate("");
-    setVisitors("");
-    setPurpose("Social");
-    setVisitNotes("");
-    setRelationshipsDiscovered("");
-    setInterestsExpressed("");
-    setFollowUp("");
-    setFollowUpDate("");
   };
 
   const deleteSubmission = (id: string) => {
@@ -292,17 +178,6 @@ export const Forms: React.FC = () => {
               <div className="form-card-title">New Person</div>
               <div className="form-card-desc">
                 Add a new person to the community
-              </div>
-            </button>
-
-            <button
-              className="form-card"
-              onClick={() => setActiveFormType("homevisit")}
-            >
-              <div className="form-card-icon">🏠</div>
-              <div className="form-card-title">Home Visit Report</div>
-              <div className="form-card-desc">
-                Record details of a home visit
               </div>
             </button>
           </div>
@@ -441,136 +316,6 @@ export const Forms: React.FC = () => {
             </form>
           )}
 
-          {/* Home Visit Form */}
-          {activeFormType === "homevisit" && (
-            <form onSubmit={handleHomeVisitSubmit} className="data-form">
-              <h3>🏠 Home Visit Report</h3>
-
-              <div className="form-group">
-                <label>Person Visited *</label>
-                <select
-                  value={visitPerson}
-                  onChange={(e) => setVisitPerson(e.target.value)}
-                  required
-                  className="form-select"
-                >
-                  <option value="">Select a person...</option>
-                  {people
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((person) => (
-                      <option key={person.id} value={person.id}>
-                        {person.name} - {person.area}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Visit Date *</label>
-                  <input
-                    type="date"
-                    value={visitDate}
-                    onChange={(e) => setVisitDate(e.target.value)}
-                    required
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Purpose *</label>
-                  <select
-                    value={purpose}
-                    onChange={(e) => setPurpose(e.target.value as VisitPurpose)}
-                    className="form-select"
-                  >
-                    <option value="Introduction">Introduction</option>
-                    <option value="Follow-up">Follow-up</option>
-                    <option value="Social">Social</option>
-                    <option value="Teaching">Teaching</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Visitors *</label>
-                <input
-                  type="text"
-                  value={visitors}
-                  onChange={(e) => setVisitors(e.target.value)}
-                  required
-                  className="form-input"
-                  placeholder="Who made the visit? (comma separated)"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Visit Notes</label>
-                <textarea
-                  value={visitNotes}
-                  onChange={(e) => setVisitNotes(e.target.value)}
-                  className="form-textarea"
-                  rows={4}
-                  placeholder="What happened during the visit?"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Relationships Discovered</label>
-                <textarea
-                  value={relationshipsDiscovered}
-                  onChange={(e) => setRelationshipsDiscovered(e.target.value)}
-                  className="form-textarea"
-                  rows={2}
-                  placeholder="Any family or community connections discovered?"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Interests Expressed</label>
-                <textarea
-                  value={interestsExpressed}
-                  onChange={(e) => setInterestsExpressed(e.target.value)}
-                  className="form-textarea"
-                  rows={2}
-                  placeholder="What interests did they express?"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Follow-up Needed</label>
-                <textarea
-                  value={followUp}
-                  onChange={(e) => setFollowUp(e.target.value)}
-                  className="form-textarea"
-                  rows={2}
-                  placeholder="What needs to be followed up on?"
-                />
-              </div>
-
-              {followUp && (
-                <div className="form-group">
-                  <label>Follow-up Date</label>
-                  <input
-                    type="date"
-                    value={followUpDate}
-                    onChange={(e) => setFollowUpDate(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn btn--primary"
-                disabled={
-                  !submitterName || !visitPerson || !visitDate || !visitors
-                }
-              >
-                Submit Home Visit Report
-              </button>
-            </form>
-          )}
         </div>
       )}
 
