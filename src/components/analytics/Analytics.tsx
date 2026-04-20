@@ -8,6 +8,7 @@ import { ConnectionStats } from "./ConnectionStats";
 import { EngagementStats } from "./EngagementStats";
 import { LearningProgress } from "./LearningProgress";
 import { AreaBreakdown } from "./AreaBreakdown";
+import { GrowthOverTime } from "./GrowthOverTime";
 import { useAnalyticsMetrics } from "../../hooks";
 
 /**
@@ -27,6 +28,7 @@ const AnalyticsContent: React.FC = memo(() => {
 
   return (
     <div className="analytics">
+      <GrowthOverTime people={people} activities={activities} />
       <h2>Community Overview</h2>
 
       <div className="analytics__summary">
