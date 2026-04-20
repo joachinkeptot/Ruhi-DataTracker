@@ -12,7 +12,7 @@
     "build:electron": "npm run build && electron-builder",
     "build:mac": "npm run build && electron-builder --mac",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc -p config/tsconfig.json --noEmit"
   },
   "dependencies": {
     "force-graph": "^1.51.1",
