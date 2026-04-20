@@ -159,6 +159,7 @@ export interface Activity {
   participantIds: string[]; // Array of Person IDs (derived from Person.connectedActivities)
   averageAttendance?: number; // Auto-calculated from attendance logs
   lastSessionDate?: string; // ISO 8601 date of most recent meeting
+  isActive?: boolean; // defaults to true when absent; backward compatible
 
   // Details
   notes?: string;
@@ -226,12 +227,12 @@ export type ViewMode =
   | "cohorts"
   | "families"
   | "activities"
-  | "homevisits"
   | "analytics"
   | "forms"
   | "programs"
   | "reflections"
-  | "map";
+  | "map"
+  | "calendar";
 
 // ============================================================================
 // PROGRAMS — Children's Festivals, JY Intensives, Study Circles
@@ -317,6 +318,9 @@ export interface AppState {
   // Area nicknames: maps raw area string → friendly nickname
   areaNicknames: Record<string, string>;
 
+  // Calendar URL for integration
+  calendarUrl?: string;
+
   // Queries
   savedQueries: SavedQuery[];
 
@@ -387,6 +391,7 @@ export interface SerializableState {
   cohortViewMode?: CohortViewMode;
   showConnections?: boolean;
   areaNicknames?: Record<string, string>;
+  calendarUrl?: string;
 }
 
 // ============================================================================
