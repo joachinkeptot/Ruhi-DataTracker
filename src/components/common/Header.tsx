@@ -69,13 +69,6 @@ export const Header: React.FC<HeaderProps> = ({
           Activities
         </button>
         <button
-          className={`tab ${viewMode === "homevisits" ? "tab--active" : ""}`}
-          onClick={() => handleViewChange("homevisits")}
-          role="tab"
-        >
-          Home Visits
-        </button>
-        <button
           className={`tab ${viewMode === "forms" ? "tab--active" : ""}`}
           onClick={() => handleViewChange("forms")}
           role="tab"
@@ -109,6 +102,13 @@ export const Header: React.FC<HeaderProps> = ({
           role="tab"
         >
           Map
+        </button>
+        <button
+          className={`tab ${viewMode === "calendar" ? "tab--active" : ""}`}
+          onClick={() => handleViewChange("calendar")}
+          role="tab"
+        >
+          Calendar
         </button>
       </div>
       <div className="board__actions">

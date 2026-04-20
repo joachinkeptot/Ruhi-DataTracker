@@ -6,7 +6,6 @@ import { NetworkVisualization } from "./components/network";
 import {
   DetailPanel,
   Statistics,
-  HomeVisitsTracker,
   ProgramsPanel,
   Reflections,
 } from "./components/panels";
@@ -18,6 +17,7 @@ import {
 } from "./components/modals";
 import { Forms, PublicForms } from "./components/forms";
 import { MapView } from "./components/map";
+import { CalendarView } from "./components/calendar";
 import Analytics from "./components/analytics/Analytics";
 import {
   AnalyticsErrorBoundary,
@@ -292,10 +292,6 @@ const AppContent: React.FC = () => {
                 <Analytics />
               </AnalyticsErrorBoundary>
             </div>
-          ) : viewMode === "homevisits" ? (
-            <div className="panel__section">
-              <HomeVisitsTracker />
-            </div>
           ) : viewMode === "forms" ? (
             <div className="panel__section">
               <Forms />
@@ -306,6 +302,10 @@ const AppContent: React.FC = () => {
             </div>
           ) : viewMode === "map" ? (
             <MapView people={filteredPeople} />
+          ) : viewMode === "calendar" ? (
+            <div className="panel__section">
+              <CalendarView />
+            </div>
           ) : (
             <div className="panel__section">
               <div className="dashboard-layout">
@@ -382,7 +382,7 @@ const AppContent: React.FC = () => {
                         onSelectPerson={(id) =>
                           setSelected({ type: "people", id })
                         }
-                        viewMode={viewMode}
+                        viewMode={viewMode === "cohorts" ? "cohorts" : "people"}
                         cohortGroups={
                           viewMode === "cohorts" ? cohortGroups : []
                         }
