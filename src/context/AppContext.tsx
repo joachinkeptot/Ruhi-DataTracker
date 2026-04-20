@@ -52,6 +52,7 @@ interface AppContextType extends AppState {
   updatePersonPosition: (id: string, position: Position) => void;
   updateActivityPosition: (id: string, position: Position) => void;
   updateAreaNickname: (area: string, nickname: string) => void;
+  setCalendarUrl: (url: string) => void;
   importData: (data: {
     people?: Person[];
     activities?: Activity[];
@@ -94,6 +95,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     useState<CohortViewMode>("categories");
   const [showConnections, setShowConnectionsState] = useState<boolean>(false);
   const [areaNicknames, setAreaNicknames] = useState<Record<string, string>>({});
+  const [calendarUrl, setCalendarUrlState] = useState<string>("");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load initial data
@@ -113,6 +115,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setCohortViewModeState(savedData.cohortViewMode || "categories");
       setShowConnectionsState(savedData.showConnections ?? false);
       setAreaNicknames(savedData.areaNicknames || {});
+      setCalendarUrlState(savedData.calendarUrl || "");
     }
     setIsLoaded(true);
   }, []);
@@ -144,6 +147,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           cohortViewMode,
           showConnections,
           areaNicknames,
+          calendarUrl,
         };
         saveToLocalStorage(state);
       } catch (error) {
@@ -175,6 +179,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     cohortViewMode,
     showConnections,
     areaNicknames,
+    calendarUrl,
   ]);
 
   const addProgramEvent = (event: Omit<ProgramEvent, "id">) => {
@@ -343,6 +348,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     });
   };
 
+  const setCalendarUrl = (url: string) => {
+    setCalendarUrlState(url);
+  };
+
   const importData = (data: {
     people?: Person[];
     activities?: Activity[];
@@ -367,6 +376,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     cohortViewMode,
     showConnections,
     areaNicknames,
+    calendarUrl,
+    setCalendarUrl,
     updateAreaNickname,
     addPerson,
     updatePerson,
