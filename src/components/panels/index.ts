@@ -1,6 +1,5 @@
 export { DetailPanel } from "./DetailPanel";
 export { Statistics } from "./Statistics";
-export { HomeVisitsTracker } from "./HomeVisitsTracker";
 export { ProgramsPanel } from "./ProgramsPanel";
 export { HomeVisitSection } from "./HomeVisitSection";
 export { ConversationSection } from "./ConversationSection";
