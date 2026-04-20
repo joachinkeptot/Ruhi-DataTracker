@@ -318,8 +318,7 @@ export interface AppState {
   // Area nicknames: maps raw area string → friendly nickname
   areaNicknames: Record<string, string>;
 
-  // Calendar URL for integration
-  calendarUrl?: string;
+  calendarUrl: string;
 
   // Queries
   savedQueries: SavedQuery[];
