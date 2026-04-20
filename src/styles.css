@@ -37,9 +37,8 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1.2rem 2rem;
-  background: rgba(8, 8, 15, 0.9);
+  background: var(--panel);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(8px);
 }
 
 .brand {
