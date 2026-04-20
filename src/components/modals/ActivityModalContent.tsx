@@ -20,6 +20,7 @@ export const ActivityModalContent: React.FC<ActivityModalContentProps> = ({
   const [leader, setLeader] = useState("");
   const [activityParticipants, setActivityParticipants] = useState<string[]>([]);
   const [participantSearch, setParticipantSearch] = useState("");
+  const [isActive, setIsActive] = useState<boolean>(true);
 
   useEffect(() => {
     if (editingActivityId) {
@@ -30,6 +31,7 @@ export const ActivityModalContent: React.FC<ActivityModalContentProps> = ({
         setLeader(activity.facilitator || activity.leader || "");
         setNotes(activity.notes || "");
         setActivityParticipants(activity.participantIds || []);
+        setIsActive(activity.isActive !== false);
       }
     } else {
       resetForm();
@@ -43,6 +45,7 @@ export const ActivityModalContent: React.FC<ActivityModalContentProps> = ({
     setLeader("");
     setActivityParticipants([]);
     setParticipantSearch("");
+    setIsActive(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,6 +64,7 @@ export const ActivityModalContent: React.FC<ActivityModalContentProps> = ({
       facilitator: leader.trim() || undefined,
       notes: notes.trim() || undefined,
       participantIds: activityParticipants,
+      isActive,
       materials: undefined,
       dateCreated: new Date().toISOString(),
       lastModified: new Date().toISOString(),
@@ -205,6 +209,24 @@ export const ActivityModalContent: React.FC<ActivityModalContentProps> = ({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
+      </div>
+
+      <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <label style={{ margin: 0 }}>Status</label>
+        <button
+          type="button"
+          className={`btn btn--sm ${isActive ? "btn--primary" : ""}`}
+          onClick={() => setIsActive(true)}
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          className={`btn btn--sm ${!isActive ? "btn--primary" : ""}`}
+          onClick={() => setIsActive(false)}
+        >
+          Inactive
+        </button>
       </div>
 
       <div className="modal__actions">
