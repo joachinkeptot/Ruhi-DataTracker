@@ -242,6 +242,7 @@ export const loadFromLocalStorage = (): SerializableState | null => {
                 } as ActivityReflection;
               })
             : [],
+          isActive: typeof a.isActive === "boolean" ? a.isActive : true,
           dateCreated: String(a.dateCreated || new Date().toISOString()),
           lastModified: String(a.lastModified || new Date().toISOString()),
           position: a.position
