@@ -1,16 +1,16 @@
 :root {
-  color-scheme: light;
-  --bg: #f8f9fa;
-  --panel: #ffffff;
-  --panel-2: #f1f3f5;
-  --border: #e5e7eb;
-  --accent: #4f46e5;
-  --accent-2: #6366f1;
-  --text: #111827;
-  --muted: #6b7280;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
+  color-scheme: dark;
+  --bg: #08080f;
+  --panel: #0f0f1a;
+  --panel-2: #161626;
+  --border: #1e1e35;
+  --accent: #6366f1;
+  --accent-2: #818cf8;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 }
 
 * {
@@ -21,7 +21,10 @@
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 50%),
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.06), transparent 50%),
+    #08080f;
   color: var(--text);
   min-height: 100vh;
 }
@@ -37,8 +40,9 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1.2rem 2rem;
-  background: var(--panel);
+  background: rgba(8, 8, 15, 0.9);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
 }
 
 .brand {
