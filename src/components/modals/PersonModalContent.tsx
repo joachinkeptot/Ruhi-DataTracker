@@ -88,6 +88,9 @@ export const PersonModalContent: React.FC<PersonModalContentProps> = ({
     e.preventDefault();
     if (!name.trim()) return;
 
+    const now = new Date().toISOString();
+    const existingPerson = editingPersonId ? people.find((p) => p.id === editingPersonId) : null;
+
     const personData: Omit<Person, "id"> = {
       name: name.trim(),
       area: area.trim(),
@@ -104,12 +107,12 @@ export const PersonModalContent: React.FC<PersonModalContentProps> = ({
       isElder,
       schoolName: schoolName.trim() || undefined,
       employmentStatus: (employmentStatus || "student") as EmploymentStatus,
-      homeVisits: [],
-      conversations: [],
-      connections: [],
-      dateAdded: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      position: { x: Math.random() * 700, y: Math.random() * 400 },
+      homeVisits: existingPerson?.homeVisits || [],
+      conversations: existingPerson?.conversations || [],
+      connections: existingPerson?.connections || [],
+      dateAdded: existingPerson?.dateAdded || now,
+      lastModified: now,
+      position: existingPerson?.position || { x: Math.random() * 700, y: Math.random() * 400 },
     };
 
     if (editingPersonId) {

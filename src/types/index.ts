@@ -230,7 +230,6 @@ export type ViewMode =
   | "analytics"
   | "forms"
   | "programs"
-  | "reflections"
   | "map"
   | "calendar";
 

@@ -90,13 +90,6 @@ export const Header: React.FC<HeaderProps> = ({
           Analytics
         </button>
         <button
-          className={`tab ${viewMode === "reflections" ? "tab--active" : ""}`}
-          onClick={() => handleViewChange("reflections")}
-          role="tab"
-        >
-          Reflections
-        </button>
-        <button
           className={`tab ${viewMode === "map" ? "tab--active" : ""}`}
           onClick={() => handleViewChange("map")}
           role="tab"

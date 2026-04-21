@@ -53,13 +53,16 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
       return;
     }
 
+    const existingFamily = editingFamilyId ? families.find((f) => f.id === editingFamilyId) : null;
+
     const familyData: Omit<Family, "id"> = {
       familyName: familyName.trim(),
       primaryArea: primaryArea.trim(),
-      phone: phone.trim() || "",
-      email: email.trim() || "",
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
       notes: notes.trim() || undefined,
-      dateAdded: new Date().toISOString(),
+      dateAdded: existingFamily?.dateAdded || new Date().toISOString(),
+      lastContact: existingFamily?.lastContact,
     };
 
     if (editingFamilyId) {

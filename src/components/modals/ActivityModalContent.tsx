@@ -80,6 +80,7 @@ export const ActivityModalContent: React.FC<ActivityModalContentProps> = ({
           dateCreated: existingActivity.dateCreated,
           position: existingActivity.position,
           reflections: existingActivity.reflections,
+          materials: existingActivity.materials,
         });
 
         const prevIds = new Set(existingActivity.participantIds || []);

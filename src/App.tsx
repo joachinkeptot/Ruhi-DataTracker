@@ -7,7 +7,6 @@ import {
   DetailPanel,
   Statistics,
   ProgramsPanel,
-  Reflections,
 } from "./components/panels";
 import {
   ItemModal,
@@ -296,11 +295,7 @@ const AppContent: React.FC = () => {
             <div className="panel__section">
               <Forms />
             </div>
-          ) : viewMode === "reflections" ? (
-            <div className="panel__section">
-              <Reflections />
-            </div>
-          ) : viewMode === "map" ? (
+          ) :viewMode === "map" ? (
             <MapView people={filteredPeople} />
           ) : viewMode === "calendar" ? (
             <div className="panel__section">

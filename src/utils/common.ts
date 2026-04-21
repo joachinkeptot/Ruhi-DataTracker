@@ -295,6 +295,8 @@ export const loadFromLocalStorage = (): SerializableState | null => {
           ? "groups"
           : data.cohortViewMode) ?? "categories",
       viewMode: data.viewMode ?? "people",
+      areaNicknames: (data.areaNicknames as Record<string, string>) || {},
+      calendarUrl: typeof data.calendarUrl === "string" ? data.calendarUrl : "",
     };
   } catch (error) {
     console.error("Failed to load from localStorage:", error);
